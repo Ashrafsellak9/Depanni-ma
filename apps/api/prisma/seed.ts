@@ -16,6 +16,7 @@ async function main(): Promise<void> {
     { slug: "climatisation", nameFr: "Climatisation", nameAr: "التكييف" },
     { slug: "serrurerie", nameFr: "Serrurerie", nameAr: "الأقفال" },
     { slug: "peinture", nameFr: "Peinture", nameAr: "الدهان" },
+    { slug: "mecanique", nameFr: "Mécanique", nameAr: "الميكانيك" },
   ];
 
   for (const cat of categories) {

@@ -144,6 +144,63 @@ export type JobCreateInput = z.infer<typeof JobCreateSchema>;
 export type JobUpdateInput = z.infer<typeof JobUpdateSchema>;
 export type JobQueryInput = z.infer<typeof JobQuerySchema>;
 
+/** Wizard web + API `POST /jobs` (urgence NOW | IN2H | SCHEDULED) */
+export const JobCreateWizardBaseSchema = z.object({
+  categoryId: z.string().uuid("Sélectionnez une catégorie"),
+  subcategory: z.string().min(1, "Sélectionnez un type d'intervention").max(80),
+  title: z.string().min(5, "Titre trop court").max(120),
+  description: z.string().min(20, "Minimum 20 caractères").max(2000),
+  urgency: z.enum(["NOW", "IN2H", "SCHEDULED"]).default("NOW"),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  address: z.string().min(3, "Adresse requise").max(300),
+  city: z.string().min(1, "Ville requise").max(100).default("Casablanca"),
+  budgetMin: z.number().positive().optional(),
+  budgetMax: z.number().positive().optional(),
+  scheduledAt: z.string().datetime().optional(),
+});
+
+export const JobCreateWizardSchema = JobCreateWizardBaseSchema.refine(
+  (d) => {
+    if (d.budgetMin != null && d.budgetMax != null) return d.budgetMax >= d.budgetMin;
+    return true;
+  },
+  { message: "Le budget max doit être ≥ au min", path: ["budgetMax"] },
+).refine(
+  (d) => d.urgency !== "SCHEDULED" || !!d.scheduledAt,
+  { message: "Choisissez une date pour une intervention planifiée", path: ["scheduledAt"] },
+);
+
+export const JobWizardStep1Schema = JobCreateWizardBaseSchema.pick({ categoryId: true });
+export const JobWizardStep2Schema = JobCreateWizardBaseSchema.pick({
+  subcategory: true,
+  title: true,
+});
+export const JobWizardStep3Schema = JobCreateWizardBaseSchema.pick({ description: true });
+export const JobWizardStep4Schema = JobCreateWizardBaseSchema.pick({
+  lat: true,
+  lng: true,
+  address: true,
+  city: true,
+});
+export const JobWizardStep5Schema = JobCreateWizardBaseSchema.pick({
+  urgency: true,
+  budgetMin: true,
+  budgetMax: true,
+  scheduledAt: true,
+});
+
+export type JobCreateWizardInput = z.infer<typeof JobCreateWizardSchema>;
+
+export const JobWizardSchemas = {
+  step1: JobWizardStep1Schema,
+  step2: JobWizardStep2Schema,
+  step3: JobWizardStep3Schema,
+  step4: JobWizardStep4Schema,
+  step5: JobWizardStep5Schema,
+  full: JobCreateWizardSchema,
+};
+
 // --- OfferSchema ---
 
 export const OfferCreateSchema = z.object({

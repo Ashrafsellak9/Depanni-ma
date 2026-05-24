@@ -1,5 +1,6 @@
 import {
   Droplets,
+  Wrench,
   Zap,
   Wind,
   KeyRound,
@@ -45,5 +46,11 @@ export const SERVICE_CATEGORIES: ServiceCategoryItem[] = [
     slug: "peinture",
     nameFr: "Peinture",
     icon: Paintbrush,
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000006",
+    slug: "mecanique",
+    nameFr: "Mécanique",
+    icon: Wrench,
   },
 ];

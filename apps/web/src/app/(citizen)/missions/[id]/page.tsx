@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ArrowLeft, Phone, Star } from "lucide-react";
 
 import { ChatPanel } from "@/app/(citizen)/missions/[id]/components/ChatPanel";
+import { SearchingBanner } from "@/app/(citizen)/missions/[id]/components/SearchingBanner";
 import { OffersList } from "@/app/(citizen)/missions/[id]/components/OffersList";
 import { TrackingMap } from "@/app/(citizen)/missions/[id]/components/TrackingMap";
 import { JobStatusBadge } from "@/components/citizen/JobStatusBadge";
@@ -20,7 +21,11 @@ import { useMissionDetail } from "@/hooks/citizen/useMissionDetail";
 
 export default function MissionDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const jobId = typeof params.id === "string" ? params.id : "";
+  const isSearching =
+    searchParams.get("searching") === "1" ||
+    searchParams.get("searching") === "true";
 
   const { data: job, isLoading, isError } = useMissionDetail(jobId);
   useJobOfferNotifications(jobId);
@@ -55,8 +60,13 @@ export default function MissionDetailPage() {
     );
   }
 
+  const showSearching =
+    isSearching && job.status === "PENDING" && (job.offers?.length ?? job.offerCount ?? 0) === 0;
+
   return (
     <div className="space-y-6">
+      {showSearching && <SearchingBanner />}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Button variant="ghost" size="sm" className="-ml-2 mb-2" asChild>
