@@ -13,7 +13,7 @@ import {
 } from "@depanni/validators";
 
 import { CategoryGrid } from "@/app/(citizen)/request/new/components/CategoryGrid";
-import { LocationPicker } from "@/app/(citizen)/request/new/components/LocationPicker";
+import { LocationPicker } from "@/components/maps";
 import { PhotoUpload, type PhotoFile } from "@/app/(citizen)/request/new/components/PhotoUpload";
 import { UrgencySelector } from "@/app/(citizen)/request/new/components/UrgencySelector";
 import { Button } from "@/components/ui/button";

@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "react-hot-toast";
 
+import { GoogleMapProvider } from "@/components/maps/GoogleMapProvider";
 import { getQueryClient } from "@/lib/queryClient";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          {children}
+          <GoogleMapProvider>{children}</GoogleMapProvider>
           <Toaster
             position="top-center"
             toastOptions={{

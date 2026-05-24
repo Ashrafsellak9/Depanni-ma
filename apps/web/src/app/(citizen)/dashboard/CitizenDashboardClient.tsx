@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 
 import { ActiveMissionBanner } from "@/app/(citizen)/dashboard/components/ActiveMissionBanner";
-import { ArtisansMap } from "@/app/(citizen)/dashboard/components/ArtisansMap";
+import { ArtisansMap } from "@/components/maps";
 import { QuickServiceGrid } from "@/app/(citizen)/dashboard/components/QuickServiceGrid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

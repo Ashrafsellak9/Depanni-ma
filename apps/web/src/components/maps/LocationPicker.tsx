@@ -1,29 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Status, Wrapper } from "@googlemaps/react-wrapper";
 import { MapPin, Navigation } from "lucide-react";
 
+import { GoogleMap } from "@/components/maps/GoogleMap";
+import { MapStatus } from "@/components/maps/GoogleMapProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
-function PlacesReady({
-  onReady,
-  children,
-}: {
-  onReady: () => void;
-  children: React.ReactNode;
-}) {
-  useEffect(() => {
-    onReady();
-  }, [onReady]);
-  return <>{children}</>;
-}
-
-interface LocationPickerProps {
+export interface LocationPickerProps {
   lat?: number;
   lng?: number;
   address: string;
@@ -34,49 +21,47 @@ interface LocationPickerProps {
     address?: string;
     city?: string;
   }) => void;
-  errors?: { address?: string; city?: string; lat?: string };
+  errors?: { address?: string; city?: string };
 }
 
 function MapPickerInner({
   lat,
   lng,
-  onChange,
+  onMapClick,
 }: {
   lat: number;
   lng: number;
-  onChange: (lat: number, lng: number) => void;
+  onMapClick: (la: number, ln: number) => void;
 }) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
-    mapInstance.current = new google.maps.Map(mapRef.current, {
-      center: { lat, lng },
-      zoom: 15,
-      mapTypeControl: false,
-      streetViewControl: false,
-    });
+    if (!map) return;
     markerRef.current = new google.maps.Marker({
-      map: mapInstance.current,
+      map,
       position: { lat, lng },
       draggable: true,
     });
     markerRef.current.addListener("dragend", () => {
       const pos = markerRef.current?.getPosition();
-      if (pos) onChange(pos.lat(), pos.lng());
+      if (pos) onMapClick(pos.lat(), pos.lng());
     });
-  }, [lat, lng, onChange]);
+    map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      if (e.latLng) onMapClick(e.latLng.lat(), e.latLng.lng());
+    });
+  }, [map, onMapClick, lat, lng]);
 
   useEffect(() => {
-    if (!mapInstance.current || !markerRef.current) return;
+    if (!map || !markerRef.current) return;
     const pos = { lat, lng };
-    mapInstance.current.setCenter(pos);
+    map.setCenter(pos);
     markerRef.current.setPosition(pos);
-  }, [lat, lng]);
+  }, [lat, lng, map]);
 
-  return <div ref={mapRef} className="h-[220px] w-full rounded-xl" />;
+  return (
+    <GoogleMap center={{ lat, lng }} zoom={15} onLoad={setMap} className="h-[220px]" />
+  );
 }
 
 export function LocationPicker({
@@ -88,15 +73,18 @@ export function LocationPicker({
   errors,
 }: LocationPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const geo = useGeolocation();
+  const geo = useGeolocation({ watch: false, fallbackIp: true });
   const [placesReady, setPlacesReady] = useState(false);
 
   const effectiveLat = lat ?? geo.lat ?? 33.5731;
   const effectiveLng = lng ?? geo.lng ?? -7.5898;
 
-  const applyGeo = useCallback(() => {
-    geo.refresh();
-  }, [geo]);
+  const handleMapClick = useCallback(
+    (la: number, ln: number) => {
+      onChange({ lat: la, lng: ln });
+    },
+    [onChange],
+  );
 
   useEffect(() => {
     if (geo.lat != null && geo.lng != null && lat == null) {
@@ -110,7 +98,7 @@ export function LocationPicker({
       componentRestrictions: { country: "ma" },
       fields: ["formatted_address", "geometry", "address_components"],
     });
-    autocomplete.addListener("place_changed", () => {
+    const listener = autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace();
       if (!place.geometry?.location) return;
       const newLat = place.geometry.location.lat();
@@ -126,16 +114,24 @@ export function LocationPicker({
         city: newCity,
       });
     });
+    return () => {
+      google.maps.event.removeListener(listener);
+    };
   }, [placesReady, address, city, onChange]);
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  useEffect(() => {
+    if (window.google?.maps?.places) setPlacesReady(true);
+  }, []);
 
   return (
     <div className="space-y-4">
-      <Button type="button" variant="outline" size="sm" onClick={applyGeo} disabled={geo.loading}>
+      <Button type="button" variant="outline" size="sm" onClick={geo.refresh} disabled={geo.loading}>
         <Navigation className="mr-2 h-4 w-4" />
         {geo.loading ? "Localisation…" : "Utiliser ma position"}
       </Button>
+      {geo.source === "ip" && (
+        <p className="text-xs text-muted-foreground">Position estimée via IP (GPS refusé)</p>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="address-search">Rechercher une adresse</Label>
@@ -153,7 +149,9 @@ export function LocationPicker({
           <Input
             id="address"
             value={address}
-            onChange={(e) => onChange({ lat: effectiveLat, lng: effectiveLng, address: e.target.value })}
+            onChange={(e) =>
+              onChange({ lat: effectiveLat, lng: effectiveLng, address: e.target.value })
+            }
           />
           {errors?.address && <p className="text-sm text-danger">{errors.address}</p>}
         </div>
@@ -169,34 +167,19 @@ export function LocationPicker({
       </div>
 
       <div className="overflow-hidden rounded-xl border">
-        <Wrapper
-          apiKey={apiKey}
-          libraries={["places"]}
-          render={(status) => {
-            if (status === Status.LOADING) return <Skeleton className="h-[220px] w-full" />;
-            if (status === Status.FAILURE) {
-              return (
-                <div className="flex h-[220px] items-center justify-center bg-muted text-sm">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Carte indisponible — saisissez l&apos;adresse manuellement
-                </div>
-              );
-            }
-            return (
-              <PlacesReady onReady={() => setPlacesReady(true)}>
-                <MapPickerInner
-                  lat={effectiveLat}
-                  lng={effectiveLng}
-                  onChange={(la, ln) => onChange({ lat: la, lng: ln })}
-                />
-              </PlacesReady>
-            );
-          }}
-        />
+        <MapStatus
+          error={
+            <div className="flex h-[220px] items-center justify-center bg-muted text-sm">
+              <MapPin className="mr-2 h-4 w-4" />
+              Carte indisponible
+            </div>
+          }
+        >
+          <MapPickerInner lat={effectiveLat} lng={effectiveLng} onMapClick={handleMapClick} />
+        </MapStatus>
       </div>
       <p className="text-xs text-muted-foreground">
-        Déplacez le repère pour affiner l&apos;emplacement ({effectiveLat.toFixed(5)},{" "}
-        {effectiveLng.toFixed(5)})
+        Cliquez sur la carte ou déplacez le repère ({effectiveLat.toFixed(5)}, {effectiveLng.toFixed(5)})
       </p>
     </div>
   );

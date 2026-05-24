@@ -1,15 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import { Status, Wrapper } from "@googlemaps/react-wrapper";
 import { Star } from "lucide-react";
 
+import { GoogleMap } from "@/components/maps/GoogleMap";
+import { MapStatus } from "@/components/maps/GoogleMapProvider";
+import {
+  buildArtisanInfoHtml,
+  createArtisanCategoryIcon,
+  getCategorySlug,
+} from "@/components/maps/markers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNearbyArtisans } from "@/hooks/citizen/useNearbyArtisans";
 import type { NearbyArtisan } from "@/types/citizen";
 
-interface ArtisansMapProps {
+export interface ArtisansMapProps {
   lat: number | null;
   lng: number | null;
   categoryId?: string;
@@ -17,7 +23,7 @@ interface ArtisansMapProps {
   onSelectArtisan?: (artisan: NearbyArtisan) => void;
 }
 
-function MapInner({
+function ArtisansMapInner({
   lat,
   lng,
   categoryId,
@@ -28,8 +34,7 @@ function MapInner({
   categoryId?: string;
   onSelectArtisan?: (artisan: NearbyArtisan) => void;
 }) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const infoRef = useRef<google.maps.InfoWindow | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -41,60 +46,42 @@ function MapInner({
     limit: 50,
   });
 
-  const initMap = useCallback(() => {
-    if (!mapRef.current || mapInstance.current) return;
-    mapInstance.current = new google.maps.Map(mapRef.current, {
-      center: { lat, lng },
-      zoom: 13,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
+  useEffect(() => {
+    if (!map) return;
     infoRef.current = new google.maps.InfoWindow();
-    clustererRef.current = new MarkerClusterer({ map: mapInstance.current });
-  }, [lat, lng]);
+    clustererRef.current = new MarkerClusterer({ map });
+    map.setCenter({ lat, lng });
+  }, [map, lat, lng]);
 
   useEffect(() => {
-    initMap();
-  }, [initMap]);
-
-  useEffect(() => {
-    if (!mapInstance.current) return;
-    mapInstance.current.setCenter({ lat, lng });
-  }, [lat, lng]);
-
-  useEffect(() => {
-    if (!mapInstance.current || !clustererRef.current) return;
+    if (!map || !clustererRef.current) return;
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
     clustererRef.current.clearMarkers();
 
     const newMarkers = artisans.map((artisan) => {
+      const slug = getCategorySlug(artisan);
       const marker = new google.maps.Marker({
         position: { lat: artisan.lat, lng: artisan.lng },
         title: `${artisan.firstName} ${artisan.lastName}`,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 9,
-          fillColor: artisan.badgeVerified ? "#2E7D32" : "#E8622A",
-          fillOpacity: 1,
-          strokeColor: "#fff",
-          strokeWeight: 2,
-        },
+        icon: createArtisanCategoryIcon(slug, artisan.badgeVerified),
       });
 
       marker.addListener("click", () => {
         setSelected(artisan);
         onSelectArtisan?.(artisan);
-        const content = `
-          <div style="padding:8px;min-width:160px;font-family:sans-serif">
-            <strong>${artisan.firstName} ${artisan.lastName}</strong><br/>
-            <span>★ ${artisan.rating.toFixed(1)} · ${artisan.distanceKm} km</span>
-            ${artisan.hourlyRate ? `<br/><span>${artisan.hourlyRate} MAD/h</span>` : ""}
-          </div>`;
-        infoRef.current?.setContent(content);
-        infoRef.current?.open({ map: mapInstance.current!, anchor: marker });
+        infoRef.current?.setContent(
+          buildArtisanInfoHtml({
+            firstName: artisan.firstName,
+            lastName: artisan.lastName,
+            avatarUrl: artisan.avatarUrl,
+            rating: artisan.rating,
+            distanceKm: artisan.distanceKm,
+            hourlyRate: artisan.hourlyRate,
+          }),
+        );
+        infoRef.current?.open({ map, anchor: marker });
       });
 
       return marker;
@@ -102,11 +89,11 @@ function MapInner({
 
     markersRef.current = newMarkers;
     clustererRef.current.addMarkers(newMarkers);
-  }, [artisans, lat, lng, onSelectArtisan]);
+  }, [artisans, map, onSelectArtisan]);
 
   return (
     <div className="relative h-full min-h-[360px] w-full">
-      <div ref={mapRef} className="h-full min-h-[360px] w-full rounded-xl" />
+      <GoogleMap center={{ lat, lng }} zoom={13} onLoad={setMap} className="min-h-[360px]" />
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/60">
           <Skeleton className="h-8 w-40" />
@@ -128,11 +115,11 @@ function MapInner({
 }
 
 export function ArtisansMap({ lat, lng, categoryId, className, onSelectArtisan }: ArtisansMapProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-
   if (lat == null || lng == null) {
     return (
-      <div className={`flex min-h-[360px] items-center justify-center rounded-xl bg-muted ${className}`}>
+      <div
+        className={`flex min-h-[360px] items-center justify-center rounded-xl bg-muted ${className ?? ""}`}
+      >
         <p className="text-sm text-muted-foreground">Activez la géolocalisation pour voir les artisans</p>
       </div>
     );
@@ -140,29 +127,14 @@ export function ArtisansMap({ lat, lng, categoryId, className, onSelectArtisan }
 
   return (
     <div className={className}>
-      <Wrapper
-        apiKey={apiKey}
-        render={(status) => {
-          if (status === Status.LOADING) {
-            return <Skeleton className="min-h-[360px] w-full rounded-xl" />;
-          }
-          if (status === Status.FAILURE) {
-            return (
-              <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-dashed text-sm text-danger">
-                Carte indisponible
-              </div>
-            );
-          }
-          return (
-            <MapInner
-              lat={lat}
-              lng={lng}
-              categoryId={categoryId}
-              onSelectArtisan={onSelectArtisan}
-            />
-          );
-        }}
-      />
+      <MapStatus>
+        <ArtisansMapInner
+          lat={lat}
+          lng={lng}
+          categoryId={categoryId}
+          onSelectArtisan={onSelectArtisan}
+        />
+      </MapStatus>
     </div>
   );
 }

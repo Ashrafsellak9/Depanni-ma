@@ -9,7 +9,7 @@ import { ArrowLeft, Phone, Star } from "lucide-react";
 import { ChatPanel } from "@/app/(citizen)/missions/[id]/components/ChatPanel";
 import { SearchingBanner } from "@/app/(citizen)/missions/[id]/components/SearchingBanner";
 import { OffersList } from "@/app/(citizen)/missions/[id]/components/OffersList";
-import { TrackingMap } from "@/app/(citizen)/missions/[id]/components/TrackingMap";
+import { TrackingMap } from "@/components/maps";
 import { JobStatusBadge } from "@/components/citizen/JobStatusBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
