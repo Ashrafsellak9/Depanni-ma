@@ -1,6 +1,7 @@
 import { prisma } from "../../config/db.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
 import { chatService } from "../chat/chat.service.js";
+import { paymentsService } from "../payments/payments.service.js";
 import { citizenUserRoom, publishJobEvent } from "../jobs/jobs.events.js";
 import { closeOffersIfMaxReached } from "../jobs/jobs.diffusion.js";
 import { createOfferSchema, type CreateOfferInput } from "../jobs/jobs.schemas.js";
@@ -173,6 +174,7 @@ export class OffersService {
     });
 
     await chatService.getOrCreateConversation(jobId);
+    await paymentsService.onOfferAccepted(jobId, offer.artisanId);
 
     await publishJobEvent({
       event: "job:status",
@@ -260,6 +262,10 @@ export class OffersService {
       ],
       data: { jobId, status: "COMPLETED" },
     });
+
+    if (isCitizen) {
+      await paymentsService.onMissionCompleted(jobId, userId);
+    }
 
     return result;
   }

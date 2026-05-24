@@ -14,7 +14,12 @@ import { authRoutes } from "./modules/auth/auth.routes.js";
 import { chatRoutes } from "./modules/chat/chat.routes.js";
 import { trackingRoutes } from "./modules/tracking/tracking.routes.js";
 import { jobsRoutes } from "./modules/jobs/jobs.routes.js";
-import { paymentsWebhookRouter } from "./modules/payments/payments.webhook.js";
+import {
+  paymentsAdminRoutes,
+  paymentsRoutes,
+  walletRoutes,
+} from "./modules/payments/payments.routes.js";
+import { paymentsCmiRouter } from "./modules/payments/payments.webhook.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 import { apiRouter } from "./routes/index.js";
 
@@ -23,8 +28,9 @@ export function createApp(): Express {
 
   app.set("trust proxy", 1);
 
-  // Stripe webhook needs raw body — mount before JSON parser
-  app.use("/api/v1/payments", paymentsWebhookRouter);
+  // CMI webhook (urlencoded) — avant express.json
+  app.use("/api/payments", paymentsCmiRouter);
+  app.use("/api/v1/payments", paymentsCmiRouter);
 
   app.use(helmet());
   app.use(
@@ -52,6 +58,12 @@ export function createApp(): Express {
   app.use("/api/v1/admin", adminRoutes);
   app.use("/api/jobs", jobsRoutes);
   app.use("/api/v1/jobs", jobsRoutes);
+  app.use("/api/payments", paymentsRoutes);
+  app.use("/api/v1/payments", paymentsRoutes);
+  app.use("/api/wallet", walletRoutes);
+  app.use("/api/v1/wallet", walletRoutes);
+  app.use("/api/admin", paymentsAdminRoutes);
+  app.use("/api/v1/admin", paymentsAdminRoutes);
   app.use("/api/chat", chatRoutes);
   app.use("/api/v1/chat", chatRoutes);
   app.use("/api/tracking", trackingRoutes);

@@ -50,6 +50,21 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  CMI_MERCHANT_ID: z.string().optional(),
+  CMI_STORE_KEY: z.string().optional(),
+  CMI_GATEWAY_URL: z
+    .string()
+    .default("https://payment.cmi.co.ma/fim/est3Dgate"),
+  CMI_CALLBACK_URL: z
+    .string()
+    .default("http://localhost:4000/api/payments/cmi/callback"),
+  CMI_RETURN_URL: z.string().default("http://localhost:3000/payment/success"),
+
+  WALLET_COMMISSION_RATE_STANDARD: z.coerce.number().min(0).max(1).default(0.15),
+  WALLET_COMMISSION_RATE_PREMIUM: z.coerce.number().min(0).max(1).default(0.1),
+  WALLET_COMMISSION_RATE_PRO: z.coerce.number().min(0).max(1).default(0.07),
+  DISPUTE_FREEZE_HOURS: z.coerce.number().int().positive().default(72),
+
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
 

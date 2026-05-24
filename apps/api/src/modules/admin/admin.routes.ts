@@ -14,3 +14,5 @@ adminRoutes.get("/users", asyncHandler(adminController.listUsers));
 adminRoutes.get("/artisans/kyc-pending", asyncHandler(adminController.listKycPending));
 adminRoutes.post("/artisans/:id/approve", asyncHandler(adminController.approveKyc));
 adminRoutes.post("/artisans/:id/reject", asyncHandler(adminController.rejectKyc));
+
+// Payouts & remboursements : voir paymentsAdminRoutes monté sur /api/admin

@@ -76,6 +76,45 @@ enum MessageType {
   SYSTEM
 }
 
+enum ArtisanSubscriptionTier {
+  STANDARD
+  PREMIUM
+  PRO
+}
+
+enum PaymentMethod {
+  CARD
+  CASH
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  HELD
+  ESCROW
+  RELEASED
+  REFUNDED
+  FAILED
+  DISPUTED
+  FROZEN
+}
+
+enum WalletTransactionType {
+  TOPUP
+  ESCROW_HOLD
+  ESCROW_RELEASE
+  COMMISSION
+  PAYOUT
+  REFUND
+  ADJUSTMENT
+}
+
+enum RefundStatus {
+  INITIATED
+  EXECUTED
+  FAILED
+}
+
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
@@ -97,6 +136,8 @@ model User {
   messagesSent   Message[]      @relation("MessagesSent")
   messageReads   MessageRead[]
   refreshTokens  RefreshToken[]
+  wallet         Wallet?
+  payments       Payment[]      @relation("CitizenPayments")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -192,11 +233,13 @@ model Artisan {
   cancellationRate   Float                     @default(0)
   completedJobs      Int                       @default(0)
   totalEarnings      Float                     @default(0)
+  subscriptionTier   ArtisanSubscriptionTier   @default(STANDARD)
   categories         ArtisanCategory[]
   offers             Offer[]
   reviews            Review[]
   earnings           ArtisanEarning[]
   payouts            Payout[]
+  payments           Payment[]
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
@@ -234,6 +277,102 @@ model ArtisanEarning {
   @@map("artisan_earnings")
 }
 
+model Wallet {
+  id           String              @id @default(uuid())
+  userId       String              @unique
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance      Float               @default(0)
+  currency     String              @default("MAD")
+  transactions WalletTransaction[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id           String                @id @default(uuid())
+  walletId     String
+  wallet       Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type         WalletTransactionType
+  amount       Float
+  balanceAfter Float
+  paymentId    String?
+  payment      Payment?              @relation(fields: [paymentId], references: [id])
+  reference    String?
+  metadata     Json?
+  createdAt    DateTime              @default(now())
+
+  @@index([walletId])
+  @@index([paymentId])
+  @@map("wallet_transactions")
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  idempotencyKey   String        @unique
+  jobId            String
+  job              Job           @relation(fields: [jobId], references: [id])
+  citizenId        String
+  citizen          User          @relation("CitizenPayments", fields: [citizenId], references: [id])
+  artisanId        String?
+  artisan          Artisan?      @relation(fields: [artisanId], references: [id])
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  amount           Float
+  currency         String        @default("MAD")
+  commissionRate   Float
+  commissionAmount Float         @default(0)
+  artisanNetAmount Float         @default(0)
+  cmiOrderId       String?       @unique
+  cmiTransactionId String?
+  heldAt           DateTime?
+  escrowAt         DateTime?
+  releasedAt       DateTime?
+  refundedAt       DateTime?
+  disputeOpenedAt  DateTime?
+  disputeResolveBy DateTime?
+  auditLogs        PaymentAuditLog[]
+  walletTx         WalletTransaction[]
+  refunds          Refund[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([jobId])
+  @@index([citizenId])
+  @@index([artisanId])
+  @@index([status])
+  @@map("payments")
+}
+
+model PaymentAuditLog {
+  id        String   @id @default(uuid())
+  paymentId String
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  action    String
+  actorId   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
+  @@map("payment_audit_logs")
+}
+
+model Refund {
+  id          String       @id @default(uuid())
+  paymentId   String
+  payment     Payment      @relation(fields: [paymentId], references: [id])
+  amount      Float
+  status      RefundStatus @default(INITIATED)
+  reason      String?
+  initiatedBy String
+  executedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([paymentId])
+  @@map("refunds")
+}
+
 model Payout {
   id          String       @id @default(uuid())
   artisanId   String
@@ -241,10 +380,14 @@ model Payout {
   amount      Float
   status      PayoutStatus @default(PENDING)
   reference   String?
+  batchId     String?
+  initiatedBy String?
+  metadata    Json?
   createdAt   DateTime     @default(now())
   completedAt DateTime?
 
   @@index([artisanId])
+  @@index([batchId])
   @@map("payouts")
 }
 
@@ -277,6 +420,7 @@ model Job {
   acceptedOffer     Offer?           @relation("AcceptedJobOffer", fields: [acceptedOfferId], references: [id])
   offers            Offer[]          @relation("JobOffers")
   conversation      Conversation?
+  payments          Payment[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 

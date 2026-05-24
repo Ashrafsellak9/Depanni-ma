@@ -4,6 +4,7 @@ import { prisma } from "../../config/db.js";
 import { processAndUploadImage } from "../../middleware/upload.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
 import { offersService } from "../offers/offers.service.js";
+import { paymentsService } from "../payments/payments.service.js";
 import {
   broadcastNewJob,
   scheduleDiffusion,
@@ -147,7 +148,7 @@ export class JobsService {
       throw new ConflictError("Annulation impossible pour ce statut");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const cancelled = await prisma.$transaction(async (tx) => {
       await tx.offer.updateMany({
         where: { jobId, status: "PENDING" },
         data: { status: "CANCELLED" },
@@ -158,6 +159,9 @@ export class JobsService {
         include: jobInclude,
       });
     });
+
+    await paymentsService.onJobCancelled(jobId, citizenId);
+    return cancelled;
   }
 
   async listActiveForArtisan(artisanUserId: string, query: unknown) {

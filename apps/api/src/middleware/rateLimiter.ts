@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 import { env } from "../config/env.js";
 
@@ -23,7 +23,7 @@ export const loginLimiter = rateLimit({
   ...baseOptions,
   windowMs: 15 * 60 * 1000,
   max: 5,
-  keyGenerator: (req: Request): string => req.ip ?? "unknown",
+  keyGenerator: (req: Request): string => ipKeyGenerator(req.ip ?? "unknown"),
 });
 
 /** 3 SMS OTP / heure par numéro de téléphone */
@@ -33,7 +33,8 @@ export const otpSendLimiter = rateLimit({
   max: 3,
   keyGenerator: (req: Request): string => {
     const body = req.body as { phone?: string } | undefined;
-    return body?.phone ?? req.ip ?? "unknown";
+    if (body?.phone) return body.phone;
+    return ipKeyGenerator(req.ip ?? "unknown");
   },
 });
 

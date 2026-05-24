@@ -1,6 +1,7 @@
 import { payoutQueue } from "./queues.js";
 
 export interface PayoutJobData {
+  payoutId: string;
   artisanId: string;
   amount: number;
   currency: string;

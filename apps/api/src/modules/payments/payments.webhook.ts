@@ -4,10 +4,11 @@ import express from "express";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { paymentsController } from "./payments.controller.js";
 
-export const paymentsWebhookRouter: IRouter = Router();
+/** Webhook CMI — body urlencoded, monté AVANT express.json dans app.ts */
+export const paymentsCmiRouter: IRouter = Router();
 
-paymentsWebhookRouter.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  asyncHandler(paymentsController.webhook),
+paymentsCmiRouter.post(
+  "/cmi/callback",
+  express.urlencoded({ extended: true }),
+  asyncHandler(paymentsController.cmiCallback),
 );
