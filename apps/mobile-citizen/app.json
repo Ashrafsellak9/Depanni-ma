@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "DEPANNI Citoyen",
+    "slug": "depanni-citizen",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "depanni-citizen",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#16a34a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ma.depanni.citizen"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#16a34a"
+      },
+      "package": "ma.depanni.citizen"
+    },
+    "plugins": ["expo-router", "expo-notifications"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

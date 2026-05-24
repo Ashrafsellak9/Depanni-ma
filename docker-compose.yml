@@ -1,0 +1,58 @@
+# DEPANNI.ma — Services de développement local
+# Usage: pnpm docker:up
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: depanni-postgres
+    restart: unless-stopped
+    ports:
+      # Port 5433 sur l'hôte — évite le conflit avec PostgreSQL Windows local (5432)
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: depanni
+      POSTGRES_PASSWORD: depanni_dev
+      POSTGRES_DB: depanni
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U depanni -d depanni"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: depanni-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: depanni-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@depanni.ma
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:

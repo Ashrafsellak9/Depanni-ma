@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "DEPANNI Artisan",
+    "slug": "depanni-artisan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "depanni-artisan",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#15803d"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ma.depanni.artisan"
+    },
+    "android": {
+      "package": "ma.depanni.artisan",
+      "adaptiveIcon": {
+        "backgroundColor": "#15803d"
+      }
+    },
+    "plugins": ["expo-router", "expo-notifications"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

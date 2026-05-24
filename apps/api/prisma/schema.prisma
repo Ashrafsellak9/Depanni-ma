@@ -1,0 +1,101 @@
+// DEPANNI.ma — Prisma schema (PostgreSQL 16 + PostGIS)
+// Run: pnpm db:migrate
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+enum UserRole {
+  CITIZEN
+  ARTISAN
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  phone         String     @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  role          UserRole   @default(CITIZEN)
+  status        UserStatus @default(PENDING)
+  locale        String     @default("fr")
+  emailVerified Boolean    @default(false)
+  phoneVerified Boolean    @default(false)
+  artisan       Artisan?
+  jobs          Job[]      @relation("CitizenJobs")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("users")
+}
+
+model Artisan {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id])
+  verificationStatus String   @default("UNVERIFIED")
+  serviceRadiusKm    Float    @default(15)
+  baseLat            Float
+  baseLng            Float
+  isAvailable        Boolean  @default(true)
+  rating             Float    @default(0)
+  completedJobs      Int      @default(0)
+  offers             Offer[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("artisans")
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  citizenId   String
+  citizen     User     @relation("CitizenJobs", fields: [citizenId], references: [id])
+  categoryId  String
+  title       String
+  description String
+  status      String   @default("OPEN")
+  urgency     String   @default("NORMAL")
+  locationLat Float
+  locationLng Float
+  address     String
+  city        String
+  currency    String   @default("MAD")
+  offers      Offer[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("jobs")
+}
+
+model Offer {
+  id        String   @id @default(uuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id])
+  artisanId String
+  artisan   Artisan  @relation(fields: [artisanId], references: [id])
+  amount    Float
+  currency  String   @default("MAD")
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("offers")
+}

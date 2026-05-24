@@ -1,0 +1,12 @@
+{
+  "extends": "../../packages/config/typescript/react-native.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"],
+      "@depanni/types": ["../../packages/types/index.ts"],
+      "@depanni/validators": ["../../packages/validators/schemas.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules"]
+}

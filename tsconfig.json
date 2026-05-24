@@ -1,0 +1,15 @@
+{
+  "extends": "./packages/config/typescript/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@depanni/ui": ["./packages/ui/src/index.ts"],
+      "@depanni/ui/*": ["./packages/ui/src/*"],
+      "@depanni/types": ["./packages/types/index.ts"],
+      "@depanni/utils": ["./packages/utils/src/index.ts"],
+      "@depanni/validators": ["./packages/validators/schemas.ts"],
+      "@depanni/config/*": ["./packages/config/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", ".expo", "build"]
+}
