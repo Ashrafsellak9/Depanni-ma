@@ -1,13 +1,53 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+
+import { LoadingScreen } from "@/src/components/LoadingScreen";
+import { useProtectedRoute } from "@/src/hooks/useProtectedRoute";
+import { AppProviders } from "@/src/providers/AppProviders";
+import { useAuthStore } from "@/src/store/authStore";
+
+function RootNavigator() {
+  const hydrate = useAuthStore((s) => s.hydrate);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  useProtectedRoute();
+
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
+
+  if (isLoading) {
+    return <LoadingScreen label="DEPANNI…" />;
+  }
+
+  return (
+    <>
+      <StatusBar style="light" backgroundColor="#15803d" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="request/new"
+          options={{ headerShown: true, title: "Nouvelle demande", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="mission/[id]"
+          options={{ headerShown: true, title: "Mission" }}
+        />
+        <Stack.Screen
+          name="artisan/[id]"
+          options={{ headerShown: true, title: "Artisan" }}
+        />
+      </Stack>
+    </>
+  );
+}
 
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style="auto" />
-      <Stack>
-        <Stack.Screen name="index" options={{ title: "DEPANNI" }} />
-      </Stack>
-    </>
+    <AppProviders>
+      <RootNavigator />
+    </AppProviders>
   );
 }

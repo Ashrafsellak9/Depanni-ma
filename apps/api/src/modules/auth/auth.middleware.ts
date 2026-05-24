@@ -38,7 +38,16 @@ export function clearRefreshCookie(res: Response): void {
 }
 
 export function getRefreshTokenFromRequest(req: Request): string | undefined {
-  return req.cookies?.[env.REFRESH_COOKIE_NAME] as string | undefined;
+  const fromCookie = req.cookies?.[env.REFRESH_COOKIE_NAME] as string | undefined;
+  if (fromCookie) return fromCookie;
+
+  const fromBody = req.body?.refreshToken;
+  if (typeof fromBody === "string" && fromBody.length > 0) return fromBody;
+
+  const fromHeader = req.headers["x-refresh-token"];
+  if (typeof fromHeader === "string" && fromHeader.length > 0) return fromHeader;
+
+  return undefined;
 }
 
 const kycStorage = multer.memoryStorage();

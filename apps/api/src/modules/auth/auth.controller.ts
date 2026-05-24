@@ -45,6 +45,7 @@ export class AuthController {
       user: result.user,
       accessToken: result.accessToken,
       expiresIn: result.expiresIn,
+      ...(result.refreshToken ? { refreshToken: result.refreshToken } : {}),
     });
   };
 
@@ -79,6 +80,7 @@ export class AuthController {
       accessToken: result.accessToken,
       expiresIn: result.expiresIn,
       user: result.user,
+      ...(result.refreshToken ? { refreshToken: result.refreshToken } : {}),
     });
   };
 

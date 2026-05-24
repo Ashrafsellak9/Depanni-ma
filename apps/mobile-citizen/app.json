@@ -4,25 +4,109 @@
     "slug": "depanni-citizen",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "depanni-citizen",
+    "scheme": "depanni",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#16a34a"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ma.depanni.citizen"
+      "bundleIdentifier": "ma.depanni.citizen",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "DEPANNI utilise votre position pour trouver des artisans à proximité et suivre les interventions.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "DEPANNI utilise votre position en arrière-plan pour le suivi des missions en cours.",
+        "NSCameraUsageDescription": "DEPANNI a besoin de la caméra pour photographier votre problème de dépannage.",
+        "NSMicrophoneUsageDescription": "DEPANNI utilise le micro pour les messages vocaux dans le chat.",
+        "NSPhotoLibraryUsageDescription": "DEPANNI accède à vos photos pour joindre des images à votre demande.",
+        "UIBackgroundModes": ["location", "remote-notification"]
+      },
+      "config": {
+        "googleMapsApiKey": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
+      }
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#16a34a"
       },
-      "package": "ma.depanni.citizen"
+      "package": "ma.depanni.citizen",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
+        }
+      }
     },
-    "plugins": ["expo-router", "expo-notifications"],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#16a34a"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#15803d",
+      "barStyle": "light-content"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "DEPANNI utilise votre position pour le suivi des missions.",
+          "locationWhenInUsePermission": "DEPANNI utilise votre position pour trouver des artisans proches.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "DEPANNI a besoin de la caméra pour photographier votre problème."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#16a34a"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DEPANNI accède à vos photos pour joindre des images à votre demande."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "DEPANNI utilise le micro pour les messages vocaux."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000001"
+      }
+    },
+    "owner": "depanni"
   }
 }

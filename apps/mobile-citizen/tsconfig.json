@@ -1,8 +1,11 @@
 {
   "extends": "../../packages/config/typescript/react-native.json",
   "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
     "paths": {
       "@/*": ["./*"],
+      "@/src/*": ["./src/*"],
       "@depanni/types": ["../../packages/types/index.ts"],
       "@depanni/validators": ["../../packages/validators/schemas.ts"]
     }
