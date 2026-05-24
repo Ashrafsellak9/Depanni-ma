@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { getParam } from "../../utils/params.js";
-import { sendSuccess } from "../../utils/response.js";
+import { sendCreated, sendSuccess } from "../../utils/response.js";
 import { artisansService } from "./artisans.service.js";
 
 export class ArtisansController {
@@ -28,6 +28,24 @@ export class ArtisansController {
   getEarnings = async (req: Request, res: Response): Promise<void> => {
     const earnings = await artisansService.getEarnings(req.user!.id);
     sendSuccess(res, earnings);
+  };
+
+  listMissions = async (req: Request, res: Response): Promise<void> => {
+    const result = await artisansService.listMissions(req.user!.id, req.query);
+    sendSuccess(res, result);
+  };
+
+  getMission = async (req: Request, res: Response): Promise<void> => {
+    const mission = await artisansService.getMissionById(
+      req.user!.id,
+      getParam(req, "missionId"),
+    );
+    sendSuccess(res, mission);
+  };
+
+  requestPayout = async (req: Request, res: Response): Promise<void> => {
+    const payout = await artisansService.requestPayout(req.user!.id, req.body);
+    sendCreated(res, payout);
   };
 
   uploadKyc = async (req: Request, res: Response): Promise<void> => {

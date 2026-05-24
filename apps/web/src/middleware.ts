@@ -8,6 +8,8 @@ const publicPaths = ["/", "/comment-ca-marche", "/login", "/register"];
 
 const citizenPaths = ["/dashboard", "/missions", "/profile", "/request"];
 
+const artisanPaths = ["/artisan/dashboard", "/artisan/missions", "/artisan/earnings", "/artisan/profile"];
+
 const legacyCitizenRedirects: Record<string, string> = {
   "/citizen/dashboard": "/dashboard",
   "/citizen/missions": "/missions",
@@ -25,6 +27,10 @@ function matchPrefix(pathname: string, prefix: string): boolean {
 
 function isCitizenArea(pathname: string): boolean {
   return citizenPaths.some((p) => matchPrefix(pathname, p));
+}
+
+function isArtisanArea(pathname: string): boolean {
+  return artisanPaths.some((p) => matchPrefix(pathname, p));
 }
 
 export default auth((req) => {
@@ -46,7 +52,12 @@ export default auth((req) => {
   }
 
   if (isPublic(pathname)) {
-    if (session && (pathname === "/login" || pathname === "/register")) {
+    if (
+      session &&
+      (pathname === "/login" ||
+        pathname === "/register" ||
+        pathname.startsWith("/register/"))
+    ) {
       return NextResponse.redirect(new URL(getDashboardForRole(role ?? "CITIZEN"), req.url));
     }
     return NextResponse.next();
@@ -60,6 +71,10 @@ export default auth((req) => {
 
   if (isCitizenArea(pathname) && role !== "CITIZEN" && role !== "ADMIN") {
     return NextResponse.redirect(new URL(getDashboardForRole(role ?? "ARTISAN"), req.url));
+  }
+
+  if (isArtisanArea(pathname) && role !== "ARTISAN" && role !== "ADMIN") {
+    return NextResponse.redirect(new URL(getDashboardForRole(role ?? "CITIZEN"), req.url));
   }
 
   if (matchPrefix(pathname, "/citizen") && role !== "CITIZEN" && role !== "ADMIN") {

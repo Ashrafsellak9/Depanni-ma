@@ -19,6 +19,9 @@ artisansRoutes.patch("/me", asyncHandler(artisansController.updateMe));
 artisansRoutes.post("/me/availability", asyncHandler(artisansController.setAvailability));
 artisansRoutes.post("/me/location", asyncHandler(artisansController.updateLocation));
 artisansRoutes.get("/me/earnings", asyncHandler(artisansController.getEarnings));
+artisansRoutes.get("/me/missions", asyncHandler(artisansController.listMissions));
+artisansRoutes.get("/me/missions/:missionId", asyncHandler(artisansController.getMission));
+artisansRoutes.post("/me/payout-request", asyncHandler(artisansController.requestPayout));
 artisansRoutes.post(
   "/me/kyc",
   artisanKycUpload,

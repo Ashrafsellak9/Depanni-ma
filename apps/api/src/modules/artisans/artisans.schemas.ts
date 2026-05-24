@@ -36,6 +36,21 @@ export const rejectKycSchema = z.object({
   reason: z.string().min(5).max(500),
 });
 
+export const missionsQuerySchema = z.object({
+  status: z
+    .enum(["ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "DISPUTED"])
+    .optional(),
+  search: z.string().max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const payoutRequestSchema = z.object({
+  amount: z.coerce.number().positive(),
+  bankName: z.string().min(2).max(100),
+  iban: z.string().min(10).max(40),
+});
+
 export type UpdateArtisanMeInput = z.infer<typeof updateArtisanMeSchema>;
 export type AvailabilityInput = z.infer<typeof availabilitySchema>;
 export type LocationInput = z.infer<typeof locationSchema>;

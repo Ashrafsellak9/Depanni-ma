@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -11,7 +11,9 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { redirectAfterLogin } from "@/auth";
 import { getApiErrorMessage } from "@/lib/api";
+import type { UserRole } from "@/types";
 
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -47,7 +49,9 @@ export function LoginForm() {
       }
 
       toast.success("Connexion réussie");
-      const target = callbackUrl ?? "/dashboard";
+      const session = await getSession();
+      const role = session?.user?.role as Parameters<typeof redirectAfterLogin>[0] | undefined;
+      const target = callbackUrl ?? (role ? redirectAfterLogin(role) : "/dashboard");
       router.push(target);
       router.refresh();
     } catch (err) {

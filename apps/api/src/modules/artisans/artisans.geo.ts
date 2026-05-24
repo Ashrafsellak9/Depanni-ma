@@ -30,6 +30,8 @@ export interface NearbyArtisanRow {
   badgeTop: boolean;
   hourlyRate: number | null;
   distanceMeters: number;
+  lat: number;
+  lng: number;
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
@@ -59,6 +61,8 @@ export async function findNearbyArtisans(params: {
           a.location,
           ST_SetSRID(ST_MakePoint(${params.lng}, ${params.lat}), 4326)::geography
         ) AS "distanceMeters",
+        a.lat,
+        a.lng,
         a."firstName",
         a."lastName",
         a.avatar AS "avatarUrl"
@@ -90,6 +94,8 @@ export async function findNearbyArtisans(params: {
         a.location,
         ST_SetSRID(ST_MakePoint(${params.lng}, ${params.lat}), 4326)::geography
       ) AS "distanceMeters",
+      a.lat,
+      a.lng,
       a."firstName",
       a."lastName",
       a.avatar AS "avatarUrl"

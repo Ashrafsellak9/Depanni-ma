@@ -1,4 +1,4 @@
-import type { AvailabilityStatus } from "@prisma/client";
+import type { AvailabilityStatus, MissionStatus, Prisma } from "@prisma/client";
 
 import { extractS3Key, getSignedPrivateUrl } from "../../config/s3.js";
 import { prisma } from "../../config/db.js";
@@ -10,7 +10,9 @@ import { walletService } from "../payments/payments.wallet.js";
 import {
   availabilitySchema,
   locationSchema,
+  missionsQuerySchema,
   nearbyQuerySchema,
+  payoutRequestSchema,
   updateArtisanMeSchema,
   type NearbyQueryInput,
   type UpdateArtisanMeInput,
@@ -121,35 +123,208 @@ export class ArtisansService {
 
   async getEarnings(userId: string) {
     const artisan = await this.getArtisanByUserId(userId);
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const chartStart = new Date(now);
+    chartStart.setDate(chartStart.getDate() - 29);
+    chartStart.setHours(0, 0, 0, 0);
 
-    const [transactions, payouts, wallet] = await Promise.all([
-      prisma.walletTransaction.findMany({
-        where: { artisanId: artisan.id },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-      }),
-      prisma.payout.findMany({
-        where: { artisanId: artisan.id },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      }),
-      walletService.getBalance(artisan.id),
-    ]);
+    const [transactions, payouts, wallet, todayTx, chartTx, todayMissions] =
+      await Promise.all([
+        prisma.walletTransaction.findMany({
+          where: { artisanId: artisan.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+        prisma.payout.findMany({
+          where: { artisanId: artisan.id },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        }),
+        walletService.getBalance(artisan.id),
+        prisma.walletTransaction.findMany({
+          where: {
+            artisanId: artisan.id,
+            createdAt: { gte: startOfDay },
+            amount: { gt: 0 },
+          },
+        }),
+        prisma.walletTransaction.findMany({
+          where: {
+            artisanId: artisan.id,
+            createdAt: { gte: chartStart },
+            amount: { gt: 0 },
+          },
+          orderBy: { createdAt: "asc" },
+        }),
+        prisma.mission.count({
+          where: {
+            artisanId: artisan.id,
+            createdAt: { gte: startOfDay },
+          },
+        }),
+      ]);
 
     const credits = transactions
       .filter((t) => t.amount > 0)
       .reduce((s, t) => s + t.amount, 0);
+
+    const commissions = transactions
+      .filter((t) => t.type === "COMMISSION" || t.amount < 0)
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+
+    const revenueToday = todayTx.reduce((s, t) => s + t.amount, 0);
+
+    const byDay = new Map<string, number>();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(chartStart);
+      d.setDate(d.getDate() + i);
+      byDay.set(d.toISOString().slice(0, 10), 0);
+    }
+    for (const tx of chartTx) {
+      const key = tx.createdAt.toISOString().slice(0, 10);
+      byDay.set(key, (byDay.get(key) ?? 0) + tx.amount);
+    }
+    const chart = Array.from(byDay.entries()).map(([date, amount]) => ({
+      date,
+      amount: Math.round(amount * 100) / 100,
+    }));
 
     return {
       wallet,
       summary: {
         balance: wallet.balance,
         totalCredited: credits,
+        totalCommissions: commissions,
         totalMissions: artisan.totalMissions,
+        revenueToday,
+        missionsToday: todayMissions,
+        rating: artisan.rating,
       },
+      chart,
       transactions,
       payouts,
     };
+  }
+
+  async listMissions(userId: string, query: unknown) {
+    const artisan = await this.getArtisanByUserId(userId);
+    const params = missionsQuerySchema.parse(query);
+    const skip = (params.page - 1) * params.limit;
+
+    const where: Prisma.MissionWhereInput = {
+      artisanId: artisan.id,
+      ...(params.status ? { status: params.status as MissionStatus } : {}),
+      ...(params.search
+        ? {
+            OR: [
+              { job: { title: { contains: params.search, mode: "insensitive" } } },
+              { job: { city: { contains: params.search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.mission.findMany({
+        where,
+        skip,
+        take: params.limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              city: true,
+              address: true,
+              lat: true,
+              lng: true,
+              urgency: true,
+              category: true,
+            },
+          },
+          citizen: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          offer: {
+            select: { id: true, price: true, etaMinutes: true, status: true },
+          },
+        },
+      }),
+      prisma.mission.count({ where }),
+    ]);
+
+    return {
+      items,
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.ceil(total / params.limit),
+      },
+    };
+  }
+
+  async getMissionById(userId: string, missionId: string) {
+    const artisan = await this.getArtisanByUserId(userId);
+    const mission = await prisma.mission.findFirst({
+      where: { id: missionId, artisanId: artisan.id },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            city: true,
+            address: true,
+            lat: true,
+            lng: true,
+            urgency: true,
+            category: true,
+            description: true,
+          },
+        },
+        citizen: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        offer: {
+          select: { id: true, price: true, etaMinutes: true, status: true },
+        },
+      },
+    });
+    if (!mission) throw new NotFoundError("Mission");
+    return mission;
+  }
+
+  async requestPayout(userId: string, input: unknown) {
+    const data = payoutRequestSchema.parse(input);
+    const artisan = await this.getArtisanByUserId(userId);
+    const wallet = await walletService.getBalance(artisan.id);
+
+    if (data.amount > wallet.balance) {
+      throw new ForbiddenError("Montant supérieur au solde disponible");
+    }
+
+    const pending = await prisma.payout.count({
+      where: { artisanId: artisan.id, status: { in: ["PENDING", "PROCESSING"] } },
+    });
+    if (pending > 0) {
+      throw new ForbiddenError("Une demande de virement est déjà en cours");
+    }
+
+    return prisma.payout.create({
+      data: {
+        artisanId: artisan.id,
+        amount: data.amount,
+        status: "PENDING",
+        reference: data.iban,
+        bankDetails: { bankName: data.bankName, iban: data.iban },
+        initiatedBy: userId,
+      },
+    });
   }
 
   async getPublicProfile(artisanId: string) {
