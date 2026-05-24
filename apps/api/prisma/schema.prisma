@@ -50,6 +50,23 @@ enum PayoutStatus {
   FAILED
 }
 
+enum JobStatus {
+  PENDING
+  ACTIVE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
@@ -112,12 +129,13 @@ model RefreshToken {
 }
 
 model ServiceCategory {
-  id       String            @id @default(uuid())
-  slug     String            @unique
-  nameFr   String
-  nameAr   String?
-  artisans ArtisanCategory[]
-  createdAt DateTime         @default(now())
+  id        String            @id @default(uuid())
+  slug      String            @unique
+  nameFr    String
+  nameAr    String?
+  artisans  ArtisanCategory[]
+  jobs      Job[]
+  createdAt DateTime          @default(now())
 
   @@map("service_categories")
 }
@@ -220,38 +238,59 @@ model Payout {
 }
 
 model Job {
-  id          String   @id @default(uuid())
-  citizenId   String
-  citizen     User     @relation("CitizenJobs", fields: [citizenId], references: [id])
-  categoryId  String
-  title       String
-  description String
-  status      String   @default("OPEN")
-  urgency     String   @default("NORMAL")
-  locationLat Float
-  locationLng Float
-  address     String
-  city        String
-  currency    String   @default("MAD")
-  offers      Offer[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String           @id @default(uuid())
+  citizenId         String
+  citizen           User             @relation("CitizenJobs", fields: [citizenId], references: [id])
+  categoryId        String
+  category          ServiceCategory  @relation(fields: [categoryId], references: [id])
+  subcategory       String?
+  title             String
+  description       String
+  photos            String[]         @default([])
+  status            JobStatus        @default(PENDING)
+  urgency           String           @default("NORMAL")
+  locationLat       Float
+  locationLng       Float
+  address           String
+  city              String
+  currency          String           @default("MAD")
+  budgetMin         Float?
+  budgetMax         Float?
+  diffusionRadiusKm Float            @default(2)
+  offerCount        Int              @default(0)
+  maxOffers         Int              @default(10)
+  acceptsOffers     Boolean          @default(true)
+  expiresAt         DateTime?
+  scheduledAt       DateTime?
+  acceptedOfferId   String?          @unique
+  acceptedOffer     Offer?           @relation("AcceptedJobOffer", fields: [acceptedOfferId], references: [id])
+  offers            Offer[]          @relation("JobOffers")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([citizenId])
+  @@index([status])
+  @@index([city])
+  @@index([categoryId])
   @@map("jobs")
 }
 
 model Offer {
-  id        String   @id @default(uuid())
-  jobId     String
-  job       Job      @relation(fields: [jobId], references: [id])
-  artisanId String
-  artisan   Artisan  @relation(fields: [artisanId], references: [id])
-  amount    Float
-  currency  String   @default("MAD")
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(uuid())
+  jobId      String
+  job        Job         @relation("JobOffers", fields: [jobId], references: [id], onDelete: Cascade)
+  acceptedForJob Job?    @relation("AcceptedJobOffer")
+  artisanId  String
+  artisan    Artisan     @relation(fields: [artisanId], references: [id])
+  amount     Float
+  currency   String      @default("MAD")
+  etaMinutes Int?
+  message    String?
+  status     OfferStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
+  @@unique([jobId, artisanId])
+  @@index([jobId])
   @@map("offers")
 }

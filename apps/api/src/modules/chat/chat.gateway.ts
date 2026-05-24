@@ -1,6 +1,7 @@
 import type { Server, Socket } from "socket.io";
 
 import { verifyAccessToken } from "../../config/jwt.js";
+import { registerJobsSocketHandlers } from "../jobs/jobs.gateway.js";
 import { chatService } from "./chat.service.js";
 import { logger } from "../../utils/logger.js";
 
@@ -23,7 +24,10 @@ export function registerChatGateway(io: Server): void {
 
   io.on("connection", (socket: Socket) => {
     const userId = socket.data.userId as string;
+    const role = socket.data.role as string;
     logger.info("Socket connected", { userId, socketId: socket.id });
+
+    registerJobsSocketHandlers(socket, userId, role);
 
     socket.on("room:join", (roomId: string) => {
       void socket.join(roomId);

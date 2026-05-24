@@ -1,3 +1,5 @@
+import type { JobStatus } from "@prisma/client";
+
 import { prisma } from "../../config/db.js";
 import { ForbiddenError, NotFoundError } from "../../utils/errors.js";
 import type {
@@ -127,7 +129,7 @@ export class UsersService {
 
     const where = {
       citizenId: userId,
-      ...(status ? { status } : {}),
+      ...(status ? { status: status as JobStatus } : {}),
     };
 
     const [items, total] = await Promise.all([

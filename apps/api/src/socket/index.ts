@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import { env, socketCorsOrigins } from "../config/env.js";
 import { getRedis } from "../config/redis.js";
 import { registerChatGateway } from "../modules/chat/chat.gateway.js";
+import { initJobsRedisSubscriber } from "../modules/jobs/jobs.gateway.js";
 import { logger } from "../utils/logger.js";
 
 let io: Server | null = null;
@@ -19,6 +20,7 @@ export async function initSocket(httpServer: HttpServer): Promise<Server> {
   });
 
   io.adapter(createAdapter(pubClient, subClient));
+  initJobsRedisSubscriber(io);
   registerChatGateway(io);
 
   logger.info("Socket.io initialized", { path: env.SOCKET_PATH });

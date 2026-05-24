@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { disconnectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { disconnectRedis } from "./config/redis.js";
+import { closeJobDiffusionQueue, startJobDiffusionWorker } from "./jobs/jobDiffusionQueue.js";
 import { closeQueues } from "./jobs/queues.js";
 import { createApp } from "./app.js";
 import { closeSocket, initSocket } from "./socket/index.js";
@@ -14,6 +15,7 @@ const httpServer = createServer(app);
 let isShuttingDown = false;
 
 async function bootstrap(): Promise<void> {
+  startJobDiffusionWorker();
   await initSocket(httpServer);
 
   httpServer.listen(env.API_PORT, () => {
@@ -34,6 +36,7 @@ async function shutdown(signal: string): Promise<void> {
   });
 
   await closeSocket();
+  await closeJobDiffusionQueue();
   await closeQueues();
   await disconnectRedis();
   await disconnectDb();
