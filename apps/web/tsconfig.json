@@ -1,10 +1,11 @@
 {
   "extends": "../../packages/config/typescript/nextjs.json",
   "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"],
-      "@depanni/ui": ["../../packages/ui/src/index.ts"],
       "@depanni/types": ["../../packages/types/index.ts"],
       "@depanni/validators": ["../../packages/validators/schemas.ts"]
     }

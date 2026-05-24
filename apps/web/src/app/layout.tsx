@@ -1,15 +1,28 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Cairo, Inter } from "next/font/google";
 
-import "@depanni/ui/globals.css";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const cairo = Cairo({
+  subsets: ["latin", "arabic"],
+  variable: "--font-cairo",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "DEPANNI.ma — Dépannage et services à domicile",
+  title: {
+    default: "DEPANNI.ma — Dépannage et services à domicile",
+    template: "%s | DEPANNI.ma",
+  },
   description:
-    "Trouvez un artisan qualifié près de chez vous au Maroc. Plomberie, électricité, serrurerie et plus.",
+    "Trouvez un artisan qualifié près de chez vous au Maroc. Plomberie, électricité, climatisation et plus.",
 };
 
 export default function RootLayout({
@@ -18,8 +31,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
+    <html lang="fr" suppressHydrationWarning>
+      <body className={`${inter.variable} ${cairo.variable} font-sans`}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

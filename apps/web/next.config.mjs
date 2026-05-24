@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@depanni/ui", "@depanni/types", "@depanni/validators"],
+  transpilePackages: ["@depanni/types", "@depanni/validators"],
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+    ],
+  },
 };
 
 export default nextConfig;
