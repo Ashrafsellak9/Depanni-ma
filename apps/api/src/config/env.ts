@@ -14,13 +14,21 @@ const envSchema = z.object({
 
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
-  JWT_SECRET: z.string().min(32).default("depanni-dev-jwt-secret-change-in-prod-32"),
-  JWT_REFRESH_SECRET: z
-    .string()
-    .min(32)
-    .default("depanni-dev-refresh-secret-change-prod-32"),
+  JWT_PRIVATE_KEY: z.string().optional(),
+  JWT_PUBLIC_KEY: z.string().optional(),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+
+  REFRESH_COOKIE_NAME: z.string().default("depanni_refresh"),
+  COOKIE_SECURE: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  COOKIE_DOMAIN: z.string().optional(),
+
+  OTP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  OTP_LOCK_SECONDS: z.coerce.number().int().positive().default(1800),
 
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),

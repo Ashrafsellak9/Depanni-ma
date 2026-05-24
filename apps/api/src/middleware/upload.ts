@@ -36,6 +36,37 @@ export interface UploadedFileResult {
   height: number;
 }
 
+export async function uploadRawFile(
+  buffer: Buffer,
+  folder: string,
+  contentType: string,
+  extension: string,
+): Promise<UploadedFileResult> {
+  const s3 = getS3();
+  if (!s3) {
+    throw new AppError(503, "S3_UNAVAILABLE", "Service de stockage indisponible");
+  }
+
+  const key = `${folder}/${randomUUID()}.${extension}`;
+
+  await s3
+    .upload({
+      Bucket: getS3Bucket(),
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ACL: "public-read",
+    })
+    .promise();
+
+  return {
+    key,
+    url: getPublicUrl(key),
+    width: 0,
+    height: 0,
+  };
+}
+
 export async function processAndUploadImage(
   buffer: Buffer,
   folder = "uploads",

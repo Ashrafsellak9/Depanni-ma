@@ -1,15 +1,8 @@
 import type { Server, Socket } from "socket.io";
-import jwt from "jsonwebtoken";
 
-import type { JwtPayload } from "@depanni/types";
-
-import { env } from "../../config/env.js";
+import { verifyAccessToken } from "../../config/jwt.js";
 import { chatService } from "./chat.service.js";
 import { logger } from "../../utils/logger.js";
-
-interface SocketAuthPayload extends JwtPayload {
-  email: string;
-}
 
 export function registerChatGateway(io: Server): void {
   io.use((socket, next) => {
@@ -19,8 +12,8 @@ export function registerChatGateway(io: Server): void {
       return;
     }
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as SocketAuthPayload;
-      socket.data.userId = decoded.sub;
+      const decoded = verifyAccessToken(token);
+      socket.data.userId = decoded.userId;
       socket.data.role = decoded.role;
       next();
     } catch {

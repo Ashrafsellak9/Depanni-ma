@@ -1,15 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
 
-import type { JwtPayload, UserRole } from "@depanni/types";
+import type { UserRole } from "@depanni/types";
 
-import { env } from "../config/env.js";
+import { verifyAccessToken } from "../config/jwt.js";
 import { ForbiddenError, UnauthorizedError } from "../utils/errors.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-
-interface AccessTokenPayload extends JwtPayload {
-  email: string;
-}
 
 export const authenticate = asyncHandler(
   async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
@@ -19,12 +14,13 @@ export const authenticate = asyncHandler(
     }
 
     const token = header.slice(7);
-    const decoded = jwt.verify(token, env.JWT_SECRET) as AccessTokenPayload;
+    const decoded = verifyAccessToken(token);
 
     req.user = {
-      id: decoded.sub,
-      email: decoded.email,
+      id: decoded.userId,
+      email: "",
       role: decoded.role,
+      artisanId: decoded.artisanId,
     };
 
     next();
@@ -53,8 +49,13 @@ export const optionalAuth = asyncHandler(
 
     try {
       const token = header.slice(7);
-      const decoded = jwt.verify(token, env.JWT_SECRET) as AccessTokenPayload;
-      req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+      const decoded = verifyAccessToken(token);
+      req.user = {
+        id: decoded.userId,
+        email: "",
+        role: decoded.role,
+        artisanId: decoded.artisanId,
+      };
     } catch {
       // ignore invalid token for optional auth
     }

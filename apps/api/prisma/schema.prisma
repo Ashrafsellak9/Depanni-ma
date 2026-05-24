@@ -1,5 +1,4 @@
 // DEPANNI.ma — Prisma schema (PostgreSQL 16 + PostGIS)
-// Run: pnpm db:migrate
 
 generator client {
   provider        = "prisma-client-js"
@@ -26,35 +25,54 @@ enum UserStatus {
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  phone         String     @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  avatarUrl     String?
-  role          UserRole   @default(CITIZEN)
-  status        UserStatus @default(PENDING)
-  locale        String     @default("fr")
-  emailVerified Boolean    @default(false)
-  phoneVerified Boolean    @default(false)
-  artisan       Artisan?
-  jobs          Job[]      @relation("CitizenJobs")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id             String         @id @default(uuid())
+  email          String         @unique
+  phone          String         @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  avatarUrl      String?
+  role           UserRole       @default(CITIZEN)
+  status         UserStatus     @default(PENDING)
+  locale         String         @default("fr")
+  emailVerified  Boolean        @default(false)
+  phoneVerified  Boolean        @default(false)
+  artisan        Artisan?
+  jobs           Job[]          @relation("CitizenJobs")
+  refreshTokens  RefreshToken[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  jti       String   @unique
+  familyId  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
 }
 
 model Artisan {
   id                 String   @id @default(uuid())
   userId             String   @unique
-  user               User     @relation(fields: [userId], references: [id])
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   verificationStatus String   @default("UNVERIFIED")
+  cinNumber          String?
+  cinDocumentUrl     String?
+  tradeLicenseUrl    String?
   serviceRadiusKm    Float    @default(15)
-  baseLat            Float
-  baseLng            Float
-  isAvailable        Boolean  @default(true)
+  baseLat            Float?
+  baseLng            Float?
+  isAvailable        Boolean  @default(false)
   rating             Float    @default(0)
   completedJobs      Int      @default(0)
   offers             Offer[]

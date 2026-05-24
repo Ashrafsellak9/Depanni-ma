@@ -31,8 +31,20 @@ export class NotificationsService {
     await messaging.send({ token, notification: { title, body } });
   }
 
-  async sendOtp(phone: string, code: string): Promise<void> {
-    await this.sendSms(phone, `DEPANNI — Votre code: ${code}. Valide 10 minutes.`);
+  async sendOtpSms(phone: string, body: string): Promise<void> {
+    const client = this.getTwilio();
+    if (!client || !env.TWILIO_PHONE_NUMBER) {
+      this.loggerWarnDev(phone, body);
+      return;
+    }
+    await client.messages.create({ to: phone, from: env.TWILIO_PHONE_NUMBER, body });
+  }
+
+  private loggerWarnDev(phone: string, body: string): void {
+    logger.warn("Twilio not configured — OTP logged in dev", {
+      phone,
+      body: body.replace(/\d{6}/, "******"),
+    });
   }
 
   assertSmsConfigured(): void {

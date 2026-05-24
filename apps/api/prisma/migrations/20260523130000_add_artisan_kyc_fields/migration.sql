@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "artisans" ADD COLUMN IF NOT EXISTS "cinNumber" TEXT;
+ALTER TABLE "artisans" ADD COLUMN IF NOT EXISTS "cinDocumentUrl" TEXT;
+ALTER TABLE "artisans" ADD COLUMN IF NOT EXISTS "tradeLicenseUrl" TEXT;
+
+ALTER TABLE "artisans" ALTER COLUMN "baseLat" DROP NOT NULL;
+ALTER TABLE "artisans" ALTER COLUMN "baseLng" DROP NOT NULL;

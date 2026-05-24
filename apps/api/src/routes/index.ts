@@ -4,7 +4,6 @@ import type { ApiResponse } from "@depanni/types";
 
 import { adminRoutes } from "../modules/admin/admin.routes.js";
 import { artisansRoutes } from "../modules/artisans/artisans.routes.js";
-import { authRoutes } from "../modules/auth/auth.routes.js";
 import { jobsRoutes } from "../modules/jobs/jobs.routes.js";
 import { offersRoutes } from "../modules/offers/offers.routes.js";
 import { paymentsRoutes } from "../modules/payments/payments.routes.js";
@@ -23,7 +22,6 @@ apiRouter.get("/health", (_req, res) => {
   res.json(body);
 });
 
-apiRouter.use("/auth", authRoutes);
 apiRouter.use("/users", usersRoutes);
 apiRouter.use("/artisans", artisansRoutes);
 apiRouter.use("/jobs", jobsRoutes);

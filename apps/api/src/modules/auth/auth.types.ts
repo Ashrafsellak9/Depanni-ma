@@ -1,32 +1,29 @@
-import type { AuthTokens, UserRole } from "@depanni/types";
+import type { UserRole } from "@depanni/types";
 
-export interface RegisterDto {
+export interface AuthUserView {
+  id: string;
   email: string;
   phone: string;
-  password: string;
+  role: UserRole;
   firstName: string;
   lastName: string;
-  role: Extract<UserRole, "CITIZEN" | "ARTISAN">;
-  locale?: string;
+  status: string;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  artisanId?: string;
 }
 
-export interface LoginDto {
-  identifier: string;
-  password: string;
+export interface RegisterPendingResponse {
+  message: string;
+  userId: string;
+  phone: string;
+  otpSent: boolean;
 }
 
-export interface AuthResult {
-  user: {
-    id: string;
-    email: string;
-    role: UserRole;
-    firstName: string;
-    lastName: string;
-  };
-  tokens: AuthTokens;
-}
-
-export interface TokenPair {
+export interface AuthSessionResponse {
+  user: AuthUserView;
   accessToken: string;
-  refreshToken: string;
+  expiresIn: number;
+  /** Présent côté serveur pour cookie httpOnly — non exposé au client dans le JSON login */
+  refreshToken?: string;
 }

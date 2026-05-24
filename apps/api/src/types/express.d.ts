@@ -6,6 +6,7 @@ declare global {
       id: string;
       email: string;
       role: UserRole;
+      artisanId?: string;
     }
 
     interface Request {
