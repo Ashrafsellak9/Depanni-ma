@@ -145,6 +145,7 @@ model User {
   citizen        Citizen?
   artisan        Artisan?
   refreshTokens  RefreshToken[]
+  pushDevices    DevicePushToken[]
   notifications  Notification[]
   messagesSent   Message[]      @relation("MessagesSent")
   reviewsAuthored Review[]      @relation("ReviewsAuthored")
@@ -167,6 +168,19 @@ model RefreshToken {
   @@index([userId])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+model DevicePushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("device_push_tokens")
 }
 
 model OtpCode {

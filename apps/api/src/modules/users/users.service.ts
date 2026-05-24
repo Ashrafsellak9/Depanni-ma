@@ -6,6 +6,7 @@ import { getCitizenByUserId, getCitizenIdByUserId } from "../../utils/profile.js
 import type {
   CreateAddressInput,
   HistoryQueryInput,
+  PushTokenInput,
   UpdateUserMeInput,
 } from "./users.schemas.js";
 import { createAddressSchema, historyQuerySchema, updateUserMeSchema } from "./users.schemas.js";
@@ -25,6 +26,22 @@ type CitizenAddress = {
 };
 
 export class UsersService {
+  async savePushToken(userId: string, input: PushTokenInput) {
+    await prisma.devicePushToken.upsert({
+      where: { token: input.token },
+      create: {
+        userId,
+        token: input.token,
+        platform: input.platform,
+      },
+      update: {
+        userId,
+        platform: input.platform,
+      },
+    });
+    return { saved: true };
+  }
+
   async getMe(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },

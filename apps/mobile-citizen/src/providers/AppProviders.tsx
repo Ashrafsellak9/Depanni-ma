@@ -4,6 +4,7 @@ import { PaperProvider } from "react-native-paper";
 import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 
+import { NotificationProvider } from "@/src/providers/NotificationProvider";
 import { theme } from "@/src/theme";
 
 interface AppProvidersProps {
@@ -27,7 +28,9 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
-        <PaperProvider theme={theme}>{children}</PaperProvider>
+        <PaperProvider theme={theme}>
+          <NotificationProvider>{children}</NotificationProvider>
+        </PaperProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

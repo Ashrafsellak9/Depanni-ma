@@ -8,6 +8,8 @@ export const usersRoutes: IRouter = Router();
 
 usersRoutes.use(authenticate);
 
+usersRoutes.post("/push-token", asyncHandler(usersController.savePushToken));
+
 usersRoutes.get("/me", asyncHandler(usersController.getMe));
 usersRoutes.patch("/me", asyncHandler(usersController.updateMe));
 usersRoutes.post("/me/addresses", asyncHandler(usersController.addAddress));

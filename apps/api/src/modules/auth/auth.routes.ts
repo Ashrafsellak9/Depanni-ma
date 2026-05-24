@@ -22,6 +22,8 @@ authRoutes.post(
   asyncHandler(authController.registerArtisan),
 );
 
+authRoutes.post("/resend-otp", otpSendLimiter, asyncHandler(authController.resendOtp));
+
 authRoutes.post("/verify-otp", loginLimiter, asyncHandler(authController.verifyOtp));
 
 authRoutes.post("/login", loginLimiter, asyncHandler(authController.login));

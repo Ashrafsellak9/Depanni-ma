@@ -2,9 +2,16 @@ import type { Request, Response } from "express";
 
 import { getParam } from "../../utils/params.js";
 import { sendSuccess } from "../../utils/response.js";
+import { pushTokenSchema } from "./users.schemas.js";
 import { usersService } from "./users.service.js";
 
 export class UsersController {
+  savePushToken = async (req: Request, res: Response): Promise<void> => {
+    const input = pushTokenSchema.parse(req.body);
+    const result = await usersService.savePushToken(req.user!.id, input);
+    sendSuccess(res, result, 201);
+  };
+
   getMe = async (req: Request, res: Response): Promise<void> => {
     const user = await usersService.getMe(req.user!.id);
     sendSuccess(res, user);

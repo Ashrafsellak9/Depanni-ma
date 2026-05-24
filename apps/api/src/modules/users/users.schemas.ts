@@ -34,3 +34,10 @@ export const historyQuerySchema = z.object({
 export type UpdateUserMeInput = z.infer<typeof updateUserMeSchema>;
 export type CreateAddressInput = z.infer<typeof createAddressSchema>;
 export type HistoryQueryInput = z.infer<typeof historyQuerySchema>;
+
+export const pushTokenSchema = z.object({
+  token: z.string().min(10).max(512),
+  platform: z.enum(["ios", "android", "web"]).optional(),
+});
+
+export type PushTokenInput = z.infer<typeof pushTokenSchema>;

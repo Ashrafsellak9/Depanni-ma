@@ -11,11 +11,11 @@ export const passwordSchema = z
   .regex(/[0-9]/, "Au moins un chiffre");
 
 export const registerCitizenSchema = z.object({
-  email: z.string().email("Email invalide"),
+  email: z.string().email("Email invalide").optional(),
   phone: moroccanPhoneSchema,
   password: passwordSchema,
   firstName: z.string().min(2).max(50),
-  lastName: z.string().min(2).max(50),
+  lastName: z.string().min(1).max(50).optional(),
   locale: z.enum(["fr", "ar", "en"]).default("fr"),
 });
 
@@ -38,9 +38,20 @@ export const verifyOtpSchema = z.object({
   purpose: z.enum(["REGISTER", "RESET", "VERIFY_PHONE"]),
 });
 
-export const loginSchema = z.object({
-  email: z.string().email("Email invalide"),
-  password: z.string().min(1, "Mot de passe requis"),
+export const loginSchema = z
+  .object({
+    email: z.string().email("Email invalide").optional(),
+    phone: moroccanPhoneSchema.optional(),
+    password: z.string().min(1, "Mot de passe requis"),
+  })
+  .refine((data) => Boolean(data.email ?? data.phone), {
+    message: "Email ou téléphone requis",
+    path: ["email"],
+  });
+
+export const resendOtpSchema = z.object({
+  phone: moroccanPhoneSchema,
+  purpose: z.enum(["REGISTER", "RESET", "VERIFY_PHONE"]),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -57,6 +68,7 @@ export type RegisterCitizenInput = z.infer<typeof registerCitizenSchema>;
 export type RegisterArtisanInput = z.infer<typeof registerArtisanSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 

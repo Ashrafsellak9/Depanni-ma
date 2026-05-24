@@ -1,14 +1,17 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
 import { LoadingScreen } from "@/src/components/LoadingScreen";
+import { setSessionExpiredHandler } from "@/src/lib/auth-events";
 import { useProtectedRoute } from "@/src/hooks/useProtectedRoute";
 import { AppProviders } from "@/src/providers/AppProviders";
 import { useAuthStore } from "@/src/store/authStore";
 
 function RootNavigator() {
+  const router = useRouter();
   const hydrate = useAuthStore((s) => s.hydrate);
+  const logout = useAuthStore((s) => s.logout);
   const isLoading = useAuthStore((s) => s.isLoading);
 
   useProtectedRoute();
@@ -16,6 +19,15 @@ function RootNavigator() {
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      void logout().then(() => {
+        router.replace("/(auth)/login");
+      });
+    });
+    return () => setSessionExpiredHandler(null);
+  }, [logout, router]);
 
   if (isLoading) {
     return <LoadingScreen label="DEPANNI…" />;

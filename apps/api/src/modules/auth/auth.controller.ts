@@ -11,6 +11,7 @@ import {
   loginSchema,
   registerArtisanSchema,
   registerCitizenSchema,
+  resendOtpSchema,
   resetPasswordSchema,
   verifyOtpSchema,
 } from "./auth.schemas.js";
@@ -31,6 +32,12 @@ export class AuthController {
     };
     const result = await authService.registerArtisan(input, files ?? {});
     sendCreated(res, result);
+  };
+
+  resendOtp = async (req: Request, res: Response): Promise<void> => {
+    const input = resendOtpSchema.parse(req.body);
+    const result = await authService.resendOtp(input.phone, input.purpose);
+    sendSuccess(res, result);
   };
 
   verifyOtp = async (req: Request, res: Response): Promise<void> => {

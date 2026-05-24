@@ -65,13 +65,15 @@ const userSessionInclude = {
 
 export class AuthService {
   async registerCitizen(input: RegisterCitizenInput): Promise<RegisterPendingResponse> {
-    await this.assertUniqueContact(input.email, input.phone);
+    const email = this.resolveCitizenEmail(input);
+    const lastName = input.lastName?.trim() || "—";
+    await this.assertUniqueContact(email, input.phone);
 
     const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
 
     const user = await prisma.user.create({
       data: {
-        email: input.email,
+        email,
         phone: input.phone,
         passwordHash,
         role: "CITIZEN",
@@ -80,7 +82,7 @@ export class AuthService {
         citizen: {
           create: {
             firstName: input.firstName,
-            lastName: input.lastName,
+            lastName,
           },
         },
       },
@@ -187,9 +189,18 @@ export class AuthService {
     };
   }
 
+  async resendOtp(phone: string, purpose: VerifyOtpInput["purpose"], locale = "fr"): Promise<{ message: string }> {
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      return { message: "Si le numéro existe, un code OTP a été envoyé." };
+    }
+    await otpService.send(phone, purpose, locale);
+    return { message: "Code OTP renvoyé par SMS." };
+  }
+
   async login(input: LoginInput): Promise<AuthSessionResponse> {
-    const user = await prisma.user.findUnique({
-      where: { email: input.email },
+    const user = await prisma.user.findFirst({
+      where: input.phone ? { phone: input.phone } : { email: input.email! },
       include: userSessionInclude,
     });
 
@@ -302,6 +313,12 @@ export class AuthService {
       return (await uploadRawFile(file.buffer, folder, "application/pdf", "pdf")).url;
     }
     return (await processAndUploadImage(file.buffer, folder)).url;
+  }
+
+  private resolveCitizenEmail(input: RegisterCitizenInput): string {
+    if (input.email) return input.email;
+    const digits = input.phone.replace(/\D/g, "");
+    return `citizen_${digits}@phone.depanni.ma`;
   }
 
   private async assertUniqueContact(email: string, phone: string): Promise<void> {

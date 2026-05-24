@@ -1,9 +1,9 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
+import { notifySessionExpired } from "./auth-events";
 import { API_URL } from "./config";
-import type { ApiErrorBody, AuthSession } from "./api-types";
-import { unwrapApi } from "./api-types";
-import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./tokens";
+import type { ApiErrorBody } from "./api-types";
+import { getAccessToken } from "./session";
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -11,43 +11,30 @@ export const api = axios.create({
   timeout: 30000,
 });
 
+let refreshFn: (() => Promise<string | null>) | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 
-api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const token = await getAccessToken();
+export function bindAuthRefresh(fn: () => Promise<string | null>): void {
+  refreshFn = fn;
+}
+
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = getAccessToken();
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) {
-    await clearTokens();
-    return null;
-  }
-
-  try {
-    const { data } = await axios.post(`${API_URL}/api/auth/refresh`, { refreshToken });
-    const session = unwrapApi<AuthSession>({ data });
-    await setTokens(session.accessToken, session.refreshToken);
-    return session.accessToken;
-  } catch {
-    await clearTokens();
-    return null;
-  }
-}
-
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiErrorBody>) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && original && !original._retry) {
+    if (error.response?.status === 401 && original && !original._retry && refreshFn) {
       original._retry = true;
       if (!refreshPromise) {
-        refreshPromise = refreshAccessToken().finally(() => {
+        refreshPromise = refreshFn().finally(() => {
           refreshPromise = null;
         });
       }
@@ -56,6 +43,7 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
       }
+      notifySessionExpired();
     }
 
     return Promise.reject(error);
@@ -75,4 +63,5 @@ export function getApiErrorMessage(error: unknown): string {
   return "Une erreur est survenue";
 }
 
-export { API_URL, unwrapApi };
+export { API_URL };
+export { unwrapApi } from "./api-types";
