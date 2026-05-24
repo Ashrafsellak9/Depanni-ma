@@ -11,6 +11,16 @@ const locationSchema = z.object({
 });
 
 export class TrackingController {
+  getMissionTracking = async (req: Request, res: Response): Promise<void> => {
+    const data = await trackingService.getMissionTracking(
+      getParam(req, "missionId"),
+      req.user!.id,
+      req.user!.role,
+    );
+    sendSuccess(res, data);
+  };
+
+  /** @deprecated Utiliser Socket /tracking + GET missions/:missionId */
   updateLocation = async (req: Request, res: Response): Promise<void> => {
     const { lat, lng } = locationSchema.parse(req.body);
     const artisan = await trackingService.updateLocation(getParam(req, "artisanId"), lat, lng);

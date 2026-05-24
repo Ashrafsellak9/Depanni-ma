@@ -11,6 +11,8 @@ import { globalLimiter } from "./middleware/rateLimiter.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { artisansRoutes } from "./modules/artisans/artisans.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { chatRoutes } from "./modules/chat/chat.routes.js";
+import { trackingRoutes } from "./modules/tracking/tracking.routes.js";
 import { jobsRoutes } from "./modules/jobs/jobs.routes.js";
 import { paymentsWebhookRouter } from "./modules/payments/payments.webhook.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
@@ -50,6 +52,10 @@ export function createApp(): Express {
   app.use("/api/v1/admin", adminRoutes);
   app.use("/api/jobs", jobsRoutes);
   app.use("/api/v1/jobs", jobsRoutes);
+  app.use("/api/chat", chatRoutes);
+  app.use("/api/v1/chat", chatRoutes);
+  app.use("/api/tracking", trackingRoutes);
+  app.use("/api/v1/tracking", trackingRoutes);
 
   app.use("/api/v1", apiRouter);
 

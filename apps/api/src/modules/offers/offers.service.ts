@@ -1,5 +1,6 @@
 import { prisma } from "../../config/db.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
+import { chatService } from "../chat/chat.service.js";
 import { citizenUserRoom, publishJobEvent } from "../jobs/jobs.events.js";
 import { closeOffersIfMaxReached } from "../jobs/jobs.diffusion.js";
 import { createOfferSchema, type CreateOfferInput } from "../jobs/jobs.schemas.js";
@@ -170,6 +171,8 @@ export class OffersService {
 
       return { accepted, job: updatedJob };
     });
+
+    await chatService.getOrCreateConversation(jobId);
 
     await publishJobEvent({
       event: "job:status",

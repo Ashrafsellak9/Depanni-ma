@@ -1,51 +1,61 @@
-import type { Server, Socket } from "socket.io";
+import type { Namespace, Socket } from "socket.io";
 
-import { verifyAccessToken } from "../../config/jwt.js";
-import { registerJobsSocketHandlers } from "../jobs/jobs.gateway.js";
-import { chatService } from "./chat.service.js";
 import { logger } from "../../utils/logger.js";
+import { missionRoom, userRoom } from "../../socket/socketAuth.js";
+import { chatService } from "./chat.service.js";
+import { markReadSchema, socketMessageSchema } from "./chat.schemas.js";
 
-export function registerChatGateway(io: Server): void {
-  io.use((socket, next) => {
-    const token = socket.handshake.auth.token as string | undefined;
-    if (!token) {
-      next(new Error("Authentication required"));
-      return;
-    }
-    try {
-      const decoded = verifyAccessToken(token);
-      socket.data.userId = decoded.userId;
-      socket.data.role = decoded.role;
-      next();
-    } catch {
-      next(new Error("Invalid token"));
-    }
-  });
-
-  io.on("connection", (socket: Socket) => {
+export function registerChatGateway(chatNs: Namespace): void {
+  chatNs.on("connection", (socket: Socket) => {
     const userId = socket.data.userId as string;
-    const role = socket.data.role as string;
-    logger.info("Socket connected", { userId, socketId: socket.id });
+    void socket.join(userRoom(userId));
+    logger.info("Chat socket connected", { userId, socketId: socket.id });
 
-    registerJobsSocketHandlers(socket, userId, role);
-
-    socket.on("room:join", (roomId: string) => {
-      void socket.join(roomId);
+    socket.on("chat:join", async (payload: { missionId: string }) => {
+      try {
+        await chatService.assertMissionAccess(payload.missionId, userId, socket.data.role as string);
+        await chatService.getOrCreateConversation(payload.missionId);
+        await socket.join(missionRoom(payload.missionId));
+        socket.data.missionId = payload.missionId;
+      } catch (err) {
+        socket.emit("chat:error", { message: String(err) });
+      }
     });
 
-    socket.on("message:send", async (payload: { roomId: string; content: string }) => {
-      const message = await chatService.saveMessage({
-        roomId: payload.roomId,
-        senderId: userId,
-        content: payload.content,
-        type: "TEXT",
-        createdAt: new Date().toISOString(),
+    socket.on("chat:message", async (payload: unknown) => {
+      try {
+        const data = socketMessageSchema.parse(payload);
+        await chatService.sendMessage(
+          data.missionId,
+          userId,
+          socket.data.role as string,
+          data,
+        );
+      } catch (err) {
+        socket.emit("chat:error", { message: String(err) });
+      }
+    });
+
+    socket.on("chat:typing", (payload: { missionId: string; isTyping: boolean }) => {
+      socket.to(missionRoom(payload.missionId)).emit("chat:typing", {
+        missionId: payload.missionId,
+        userId,
+        isTyping: payload.isTyping,
       });
-      io.to(payload.roomId).emit("message:new", message);
+    });
+
+    socket.on("chat:read", async (payload: unknown) => {
+      try {
+        const { missionId, messageIds } = markReadSchema.parse(payload);
+        await chatService.markRead(missionId, userId, socket.data.role as string, messageIds);
+        socket.to(missionRoom(missionId)).emit("chat:read", { missionId, userId, messageIds });
+      } catch (err) {
+        socket.emit("chat:error", { message: String(err) });
+      }
     });
 
     socket.on("disconnect", () => {
-      logger.info("Socket disconnected", { userId, socketId: socket.id });
+      logger.debug("Chat socket disconnected", { userId });
     });
   });
 }
