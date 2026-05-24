@@ -67,6 +67,37 @@ export async function uploadRawFile(
   };
 }
 
+/** Upload privé (KYC) — pas d'ACL public, accès via signed URL. */
+export async function uploadPrivateFile(
+  buffer: Buffer,
+  folder: string,
+  contentType: string,
+  extension: string,
+): Promise<UploadedFileResult> {
+  const s3 = getS3();
+  if (!s3) {
+    throw new AppError(503, "S3_UNAVAILABLE", "Service de stockage indisponible");
+  }
+
+  const key = `${folder}/${randomUUID()}.${extension}`;
+
+  await s3
+    .upload({
+      Bucket: getS3Bucket(),
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    })
+    .promise();
+
+  return {
+    key,
+    url: key,
+    width: 0,
+    height: 0,
+  };
+}
+
 export async function processAndUploadImage(
   buffer: Buffer,
   folder = "uploads",

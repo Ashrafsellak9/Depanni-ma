@@ -35,3 +35,32 @@ export function getPublicUrl(key: string): string {
   const base = env.S3_PUBLIC_URL ?? `https://${env.S3_BUCKET}.s3.amazonaws.com`;
   return `${base.replace(/\/$/, "")}/${key}`;
 }
+
+/** URL signée pour documents KYC privés (CIN, diplôme). */
+export async function getSignedPrivateUrl(
+  key: string,
+  expiresInSeconds = 3600,
+): Promise<string> {
+  const s3 = getS3();
+  if (!s3) {
+    throw new Error("S3 is not configured");
+  }
+  return s3.getSignedUrlPromise("getObject", {
+    Bucket: getS3Bucket(),
+    Key: key,
+    Expires: expiresInSeconds,
+  });
+}
+
+/** Extrait la clé S3 depuis une URL publique ou retourne la clé telle quelle. */
+export function extractS3Key(urlOrKey: string): string {
+  if (!urlOrKey.includes("://")) {
+    return urlOrKey;
+  }
+  try {
+    const pathname = new URL(urlOrKey).pathname;
+    return pathname.startsWith("/") ? pathname.slice(1) : pathname;
+  } catch {
+    return urlOrKey;
+  }
+}

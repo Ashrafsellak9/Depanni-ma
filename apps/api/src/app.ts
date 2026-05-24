@@ -8,8 +8,11 @@ import { corsOrigins, env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { httpLogger } from "./middleware/logger.js";
 import { globalLimiter } from "./middleware/rateLimiter.js";
+import { adminRoutes } from "./modules/admin/admin.routes.js";
+import { artisansRoutes } from "./modules/artisans/artisans.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { paymentsWebhookRouter } from "./modules/payments/payments.webhook.js";
+import { usersRoutes } from "./modules/users/users.routes.js";
 import { apiRouter } from "./routes/index.js";
 
 export function createApp(): Express {
@@ -37,6 +40,14 @@ export function createApp(): Express {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/v1/auth", authRoutes);
+
+  app.use("/api/users", usersRoutes);
+  app.use("/api/v1/users", usersRoutes);
+  app.use("/api/artisans", artisansRoutes);
+  app.use("/api/v1/artisans", artisansRoutes);
+  app.use("/api/admin", adminRoutes);
+  app.use("/api/v1/admin", adminRoutes);
+
   app.use("/api/v1", apiRouter);
 
   app.use(notFoundHandler);

@@ -5,20 +5,49 @@ import { sendSuccess } from "../../utils/response.js";
 import { artisansService } from "./artisans.service.js";
 
 export class ArtisansController {
-  getById = async (req: Request, res: Response): Promise<void> => {
-    const artisan = await artisansService.getById(getParam(req, "id"));
-    sendSuccess(res, artisan);
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    const profile = await artisansService.getMe(req.user!.id);
+    sendSuccess(res, profile);
   };
 
-  upsertProfile = async (req: Request, res: Response): Promise<void> => {
-    const artisan = await artisansService.upsertProfile(req.user!.id, req.body);
-    sendSuccess(res, artisan);
+  updateMe = async (req: Request, res: Response): Promise<void> => {
+    const profile = await artisansService.updateMe(req.user!.id, req.body);
+    sendSuccess(res, profile);
   };
 
   setAvailability = async (req: Request, res: Response): Promise<void> => {
-    const { isAvailable } = req.body as { isAvailable: boolean };
-    const artisan = await artisansService.setAvailability(req.user!.id, isAvailable);
-    sendSuccess(res, artisan);
+    const result = await artisansService.setAvailability(req.user!.id, req.body);
+    sendSuccess(res, result);
+  };
+
+  updateLocation = async (req: Request, res: Response): Promise<void> => {
+    const result = await artisansService.updateLocation(req.user!.id, req.body);
+    sendSuccess(res, result);
+  };
+
+  getEarnings = async (req: Request, res: Response): Promise<void> => {
+    const earnings = await artisansService.getEarnings(req.user!.id);
+    sendSuccess(res, earnings);
+  };
+
+  uploadKyc = async (req: Request, res: Response): Promise<void> => {
+    const files = req.files as {
+      cinRecto?: Express.Multer.File[];
+      cinVerso?: Express.Multer.File[];
+      diploma?: Express.Multer.File[];
+    };
+    const result = await artisansService.uploadKyc(req.user!.id, files);
+    sendSuccess(res, result, 201);
+  };
+
+  getNearby = async (req: Request, res: Response): Promise<void> => {
+    const artisans = await artisansService.findNearby(req.query);
+    sendSuccess(res, artisans);
+  };
+
+  getPublicProfile = async (req: Request, res: Response): Promise<void> => {
+    const profile = await artisansService.getPublicProfile(getParam(req, "id"));
+    sendSuccess(res, profile);
   };
 }
 

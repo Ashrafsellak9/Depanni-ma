@@ -24,6 +24,32 @@ enum UserStatus {
   BANNED
 }
 
+enum AddressLabel {
+  HOME
+  OFFICE
+  OTHER
+}
+
+enum ArtisanVerificationStatus {
+  UNVERIFIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EarningStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
@@ -32,6 +58,7 @@ model User {
   firstName      String
   lastName       String
   avatarUrl      String?
+  bio            String?
   role           UserRole       @default(CITIZEN)
   status         UserStatus     @default(PENDING)
   locale         String         @default("fr")
@@ -39,11 +66,34 @@ model User {
   phoneVerified  Boolean        @default(false)
   artisan        Artisan?
   jobs           Job[]          @relation("CitizenJobs")
+  addresses      UserAddress[]
+  reviewsGiven   Review[]       @relation("CitizenReviews")
   refreshTokens  RefreshToken[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   @@map("users")
+}
+
+model UserAddress {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      AddressLabel @default(HOME)
+  street     String?
+  city       String
+  region     String?
+  postalCode String?
+  country    String       @default("MA")
+  formatted  String
+  lat        Float
+  lng        Float
+  isDefault  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([userId])
+  @@map("user_addresses")
 }
 
 model RefreshToken {
@@ -61,25 +111,112 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+model ServiceCategory {
+  id       String            @id @default(uuid())
+  slug     String            @unique
+  nameFr   String
+  nameAr   String?
+  artisans ArtisanCategory[]
+  createdAt DateTime         @default(now())
+
+  @@map("service_categories")
+}
+
+model ArtisanCategory {
+  artisanId  String
+  categoryId String
+  artisan    Artisan         @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([artisanId, categoryId])
+  @@map("artisan_categories")
+}
+
 model Artisan {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verificationStatus String   @default("UNVERIFIED")
+  id                 String                    @id @default(uuid())
+  userId             String                    @unique
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationStatus ArtisanVerificationStatus @default(UNVERIFIED)
+  rejectionReason    String?
+  isVerified         Boolean                   @default(false)
+  isTopArtisan       Boolean                   @default(false)
   cinNumber          String?
   cinDocumentUrl     String?
+  cinRectoUrl        String?
+  cinVersoUrl        String?
   tradeLicenseUrl    String?
-  serviceRadiusKm    Float    @default(15)
+  diplomaUrl         String?
+  bio                String?
+  specialties        String[]                  @default([])
+  zones              String[]                  @default([])
+  hourlyRate         Float?
+  serviceRadiusKm    Float                     @default(15)
   baseLat            Float?
   baseLng            Float?
-  isAvailable        Boolean  @default(false)
-  rating             Float    @default(0)
-  completedJobs      Int      @default(0)
+  currentLat         Float?
+  currentLng         Float?
+  isAvailable        Boolean                   @default(false)
+  rating             Float                     @default(0)
+  artisanScore       Float                     @default(0)
+  completionRate     Float                     @default(0)
+  avgResponseTimeSec Int                       @default(0)
+  cancellationRate   Float                     @default(0)
+  completedJobs      Int                       @default(0)
+  totalEarnings      Float                     @default(0)
+  categories         ArtisanCategory[]
   offers             Offer[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  reviews            Review[]
+  earnings           ArtisanEarning[]
+  payouts            Payout[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
   @@map("artisans")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  artisanId String
+  artisan   Artisan  @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  citizenId String
+  citizen   User     @relation("CitizenReviews", fields: [citizenId], references: [id])
+  jobId     String?
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@index([artisanId])
+  @@map("reviews")
+}
+
+model ArtisanEarning {
+  id          String        @id @default(uuid())
+  artisanId   String
+  artisan     Artisan       @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  jobId       String?
+  grossAmount Float
+  commission  Float
+  netAmount   Float
+  status      EarningStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  paidAt      DateTime?
+
+  @@index([artisanId])
+  @@map("artisan_earnings")
+}
+
+model Payout {
+  id          String       @id @default(uuid())
+  artisanId   String
+  artisan     Artisan      @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  amount      Float
+  status      PayoutStatus @default(PENDING)
+  reference   String?
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+
+  @@index([artisanId])
+  @@map("payouts")
 }
 
 model Job {
@@ -100,6 +237,7 @@ model Job {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([citizenId])
   @@map("jobs")
 }
 
