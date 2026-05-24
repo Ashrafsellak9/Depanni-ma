@@ -21,38 +21,47 @@ import type { AuthSessionResponse, AuthUserView, RegisterPendingResponse } from 
 
 const SALT_ROUNDS = 12;
 
+type UserWithProfiles = User & {
+  citizen?: { id: string; firstName: string; lastName: string } | null;
+  artisan?: { id: string; firstName: string; lastName: string } | null;
+};
+
 function buildArtisanCreateData(
   input: RegisterArtisanInput,
-  kyc: { cinDocumentUrl?: string; tradeLicenseUrl?: string },
+  kycUrls: string[],
 ): Prisma.ArtisanCreateWithoutUserInput {
   return {
+    firstName: input.firstName,
+    lastName: input.lastName,
     serviceRadiusKm: input.serviceRadiusKm,
-    verificationStatus: "PENDING",
+    kycStatus: "PENDING",
+    kycDocUrls: kycUrls,
     ...(input.cinNumber != null ? { cinNumber: input.cinNumber } : {}),
-    ...(kyc.cinDocumentUrl != null ? { cinDocumentUrl: kyc.cinDocumentUrl } : {}),
-    ...(kyc.tradeLicenseUrl != null ? { tradeLicenseUrl: kyc.tradeLicenseUrl } : {}),
     ...(input.baseLat != null && input.baseLng != null
-      ? { baseLat: input.baseLat, baseLng: input.baseLng }
+      ? { lat: input.baseLat, lng: input.baseLng }
       : {}),
   };
 }
 
-function toAuthUserView(
-  user: User & { artisan?: { id: string } | null },
-): AuthUserView {
+function toAuthUserView(user: UserWithProfiles): AuthUserView {
+  const profile = user.citizen ?? user.artisan;
   return {
     id: user.id,
     email: user.email,
     phone: user.phone,
     role: user.role as UserRole,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    status: user.status,
-    phoneVerified: user.phoneVerified,
-    emailVerified: user.emailVerified,
+    firstName: profile?.firstName ?? "",
+    lastName: profile?.lastName ?? "",
+    isVerified: user.isVerified,
+    citizenId: user.citizen?.id,
     artisanId: user.artisan?.id,
   };
 }
+
+const userSessionInclude = {
+  citizen: { select: { id: true, firstName: true, lastName: true } },
+  artisan: { select: { id: true, firstName: true, lastName: true } },
+} as const;
 
 export class AuthService {
   async registerCitizen(input: RegisterCitizenInput): Promise<RegisterPendingResponse> {
@@ -65,12 +74,15 @@ export class AuthService {
         email: input.email,
         phone: input.phone,
         passwordHash,
-        firstName: input.firstName,
-        lastName: input.lastName,
         role: "CITIZEN",
         locale: input.locale,
-        status: "PENDING",
-        phoneVerified: false,
+        isVerified: false,
+        citizen: {
+          create: {
+            firstName: input.firstName,
+            lastName: input.lastName,
+          },
+        },
       },
     });
 
@@ -95,18 +107,15 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
 
-    let cinDocumentUrl: string | undefined;
-    let tradeLicenseUrl: string | undefined;
-
+    const kycDocUrls: string[] = [];
     const cinFile = files.cinDocument?.[0];
     const licenseFile = files.tradeLicense?.[0];
 
     if (cinFile) {
-      cinDocumentUrl = await this.uploadKycFile(cinFile, "kyc/cin");
+      kycDocUrls.push(await this.uploadKycFile(cinFile, "kyc/cin"));
     }
-
     if (licenseFile) {
-      tradeLicenseUrl = await this.uploadKycFile(licenseFile, "kyc/license");
+      kycDocUrls.push(await this.uploadKycFile(licenseFile, "kyc/license"));
     }
 
     const user = await prisma.user.create({
@@ -114,18 +123,23 @@ export class AuthService {
         email: input.email,
         phone: input.phone,
         passwordHash,
-        firstName: input.firstName,
-        lastName: input.lastName,
         role: "ARTISAN",
         locale: input.locale,
-        status: "PENDING",
-        phoneVerified: false,
+        isVerified: false,
         artisan: {
-          create: buildArtisanCreateData(input, { cinDocumentUrl, tradeLicenseUrl }),
+          create: buildArtisanCreateData(input, kycDocUrls),
         },
       },
-      include: { artisan: true },
+      include: userSessionInclude,
     });
+
+    if (input.baseLat != null && input.baseLng != null && user.artisan) {
+      await prisma.$executeRaw`
+        UPDATE artisans
+        SET location = ST_SetSRID(ST_MakePoint(${input.baseLng}, ${input.baseLat}), 4326)::geography
+        WHERE id = ${user.artisan.id}
+      `;
+    }
 
     await otpService.send(input.phone, "REGISTER", input.locale);
 
@@ -142,7 +156,7 @@ export class AuthService {
 
     const user = await prisma.user.findUnique({
       where: { phone: input.phone },
-      include: { artisan: true },
+      include: userSessionInclude,
     });
 
     if (!user) {
@@ -152,8 +166,8 @@ export class AuthService {
     if (input.purpose === "REGISTER" || input.purpose === "VERIFY_PHONE") {
       const updated = await prisma.user.update({
         where: { id: user.id },
-        data: { phoneVerified: true, status: "ACTIVE" },
-        include: { artisan: true },
+        data: { isVerified: true },
+        include: userSessionInclude,
       });
 
       const tokens = await tokenService.issueTokens(
@@ -176,7 +190,7 @@ export class AuthService {
   async login(input: LoginInput): Promise<AuthSessionResponse> {
     const user = await prisma.user.findUnique({
       where: { email: input.email },
-      include: { artisan: true },
+      include: userSessionInclude,
     });
 
     if (!user) {
@@ -188,12 +202,8 @@ export class AuthService {
       throw new UnauthorizedError("Identifiants invalides");
     }
 
-    if (user.status !== "ACTIVE") {
+    if (!user.isVerified) {
       throw new UnauthorizedError("Compte non activé. Vérifiez votre numéro par OTP.");
-    }
-
-    if (!user.phoneVerified) {
-      throw new UnauthorizedError("Téléphone non vérifié");
     }
 
     const tokens = await tokenService.issueTokens(
@@ -213,7 +223,7 @@ export class AuthService {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      include: { artisan: true },
+      include: userSessionInclude,
     });
 
     if (!user) {
@@ -231,7 +241,7 @@ export class AuthService {
       const payload = verifyRefreshToken(refreshToken);
       await tokenService.revokeRefreshToken(payload.jti, refreshToken);
     } catch {
-      // Token déjà invalide — rien à faire
+      // Token déjà invalide
     }
   }
 
@@ -241,12 +251,12 @@ export class AuthService {
       return { message: "Si le numéro existe, un code OTP a été envoyé." };
     }
 
-    await otpService.send(input.phone, "RESET_PASSWORD", user.locale);
+    await otpService.send(input.phone, "RESET", user.locale);
     return { message: "Si le numéro existe, un code OTP a été envoyé." };
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<{ message: string }> {
-    await otpService.verify(input.phone, "RESET_PASSWORD", input.code);
+    await otpService.verify(input.phone, "RESET", input.code);
 
     const user = await prisma.user.findUnique({ where: { phone: input.phone } });
     if (!user) {
@@ -267,7 +277,7 @@ export class AuthService {
   async getMe(userId: string): Promise<AuthUserView> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { artisan: true },
+      include: userSessionInclude,
     });
     if (!user) {
       throw new NotFoundError("Utilisateur");
@@ -276,7 +286,7 @@ export class AuthService {
   }
 
   private buildSession(
-    user: User & { artisan?: { id: string } | null },
+    user: UserWithProfiles,
     tokens: { accessToken: string; refreshToken: string; expiresIn: number },
   ): AuthSessionResponse {
     return {

@@ -44,55 +44,54 @@ export class TrackingService {
     return `tracking:mission:${missionId}:started`;
   }
 
+  async resolveMissionId(missionOrJobId: string): Promise<string> {
+    const byId = await prisma.mission.findUnique({ where: { id: missionOrJobId } });
+    if (byId) return byId.id;
+    const byJob = await prisma.mission.findUnique({ where: { jobId: missionOrJobId } });
+    if (byJob) return byJob.id;
+    throw new NotFoundError("Mission");
+  }
+
   async assertMissionTrackingAccess(
-    missionId: string,
+    missionOrJobId: string,
     userId: string,
     role: string,
   ): Promise<{
-    job: {
-      id: string;
-      citizenId: string;
-      locationLat: number;
-      locationLng: number;
-      status: string;
-    };
-    artisanId: string | null;
-    artisanUserId: string | null;
+    missionId: string;
+    job: { id: string; lat: number; lng: number; status: string };
+    artisanId: string;
+    artisanUserId: string;
+    citizenUserId: string;
   }> {
-    const job = await prisma.job.findUnique({
+    const missionId = await this.resolveMissionId(missionOrJobId);
+
+    const mission = await prisma.mission.findUnique({
       where: { id: missionId },
       include: {
-        acceptedOffer: { include: { artisan: { select: { id: true, userId: true } } } },
+        job: { select: { id: true, lat: true, lng: true, status: true } },
+        citizen: { select: { userId: true } },
+        artisan: { select: { id: true, userId: true } },
       },
     });
-    if (!job) throw new NotFoundError("Mission");
-    if (!job.acceptedOffer) {
-      throw new ForbiddenError("Aucun artisan assigné à cette mission");
-    }
+    if (!mission) throw new NotFoundError("Mission");
 
-    const artisanUserId = job.acceptedOffer.artisan.userId;
-    const artisanId = job.acceptedOffer.artisan.id;
-    const isCitizen = job.citizenId === userId;
-    const isArtisan = artisanUserId === userId;
+    const isCitizen = mission.citizen.userId === userId;
+    const isArtisan = mission.artisan.userId === userId;
 
     if (!isCitizen && !isArtisan && role !== "ADMIN") {
       throw new ForbiddenError();
     }
 
-    if (!["ACTIVE", "IN_PROGRESS"].includes(job.status) && role !== "ADMIN") {
+    if (!["ACTIVE", "IN_PROGRESS"].includes(mission.job.status) && role !== "ADMIN") {
       throw new ForbiddenError("Suivi GPS indisponible pour ce statut");
     }
 
     return {
-      job: {
-        id: job.id,
-        citizenId: job.citizenId,
-        locationLat: job.locationLat,
-        locationLng: job.locationLng,
-        status: job.status,
-      },
-      artisanId,
-      artisanUserId,
+      missionId,
+      job: mission.job,
+      artisanId: mission.artisan.id,
+      artisanUserId: mission.artisan.userId,
+      citizenUserId: mission.citizen.userId,
     };
   }
 
@@ -123,11 +122,11 @@ export class TrackingService {
       throw new ForbiddenError("Seul l'artisan assigné peut envoyer sa position");
     }
 
-    const resolvedArtisanId = artisanId ?? access.artisanId!;
+    const resolvedArtisanId = artisanId ?? access.artisanId;
     await syncArtisanGeo(resolvedArtisanId, data.lat, data.lng);
 
     const position: MissionPosition = {
-      missionId: data.missionId,
+      missionId: access.missionId,
       artisanId: resolvedArtisanId,
       lat: data.lat,
       lng: data.lng,
@@ -137,64 +136,75 @@ export class TrackingService {
     };
 
     const redis = getRedis();
-    await redis.setex(this.missionKey(data.missionId), LOCATION_TTL_SECONDS, JSON.stringify(position));
+    await redis.setex(
+      this.missionKey(access.missionId),
+      LOCATION_TTL_SECONDS,
+      JSON.stringify(position),
+    );
 
     const distanceToClient = this.haversineMeters(
       data.lat,
       data.lng,
-      access.job.locationLat,
-      access.job.locationLng,
+      access.job.lat,
+      access.job.lng,
     );
 
     let arrived = false;
     if (distanceToClient < ARRIVED_THRESHOLD_METERS) {
-      const wasSet = await redis.setnx(this.arrivedKey(data.missionId), "1");
+      const wasSet = await redis.setnx(this.arrivedKey(access.missionId), "1");
       if (wasSet) {
         arrived = true;
-        await redis.expire(this.arrivedKey(data.missionId), LOCATION_TTL_SECONDS);
+        await redis.expire(this.arrivedKey(access.missionId), LOCATION_TTL_SECONDS);
       }
     }
 
-    const lastBroadcast = await redis.get(this.broadcastKey(data.missionId));
+    const lastBroadcast = await redis.get(this.broadcastKey(access.missionId));
     const now = Date.now();
     const shouldBroadcast =
       !lastBroadcast || now - Number(lastBroadcast) >= BROADCAST_INTERVAL_MS;
 
     if (shouldBroadcast) {
-      await redis.set(this.broadcastKey(data.missionId), String(now), "EX", 60);
+      await redis.set(this.broadcastKey(access.missionId), String(now), "EX", 60);
     }
 
     return { position, broadcasted: shouldBroadcast, arrived };
   }
 
-  async markTrackingStarted(missionId: string, artisanUserId: string): Promise<void> {
-    await this.assertMissionTrackingAccess(missionId, artisanUserId, "ARTISAN");
-    await getRedis().setex(this.startedKey(missionId), LOCATION_TTL_SECONDS, "1");
+  async markTrackingStarted(missionOrJobId: string, artisanUserId: string): Promise<void> {
+    const access = await this.assertMissionTrackingAccess(missionOrJobId, artisanUserId, "ARTISAN");
+    await getRedis().setex(this.startedKey(access.missionId), LOCATION_TTL_SECONDS, "1");
 
-    await prisma.job.update({
-      where: { id: missionId },
-      data: { status: "IN_PROGRESS" },
-    });
+    await prisma.$transaction([
+      prisma.mission.update({
+        where: { id: access.missionId },
+        data: { status: "IN_PROGRESS", startedAt: new Date() },
+      }),
+      prisma.job.update({
+        where: { id: access.job.id },
+        data: { status: "IN_PROGRESS" },
+      }),
+    ]);
   }
 
   async getMissionPosition(missionId: string): Promise<MissionPosition | null> {
-    const raw = await getRedis().get(this.missionKey(missionId));
+    const resolved = await this.resolveMissionId(missionId);
+    const raw = await getRedis().get(this.missionKey(resolved));
     if (!raw) return null;
     return JSON.parse(raw) as MissionPosition;
   }
 
   async getMissionTracking(
-    missionId: string,
+    missionOrJobId: string,
     userId: string,
     role: string,
   ): Promise<MissionTrackingView> {
-    const access = await this.assertMissionTrackingAccess(missionId, userId, role);
+    const access = await this.assertMissionTrackingAccess(missionOrJobId, userId, role);
     const redis = getRedis();
 
     const [position, arrived, started] = await Promise.all([
-      this.getMissionPosition(missionId),
-      redis.get(this.arrivedKey(missionId)),
-      redis.get(this.startedKey(missionId)),
+      this.getMissionPosition(access.missionId),
+      redis.get(this.arrivedKey(access.missionId)),
+      redis.get(this.startedKey(access.missionId)),
     ]);
 
     let eta: { durationMinutes: number; distanceKm: number } | null = null;
@@ -202,7 +212,7 @@ export class TrackingService {
       try {
         eta = await this.getEta(
           { lat: position.lat, lng: position.lng },
-          { lat: access.job.locationLat, lng: access.job.locationLng },
+          { lat: access.job.lat, lng: access.job.lng },
         );
       } catch {
         eta = null;
@@ -210,7 +220,7 @@ export class TrackingService {
     }
 
     return {
-      missionId,
+      missionId: access.missionId,
       position,
       eta,
       arrived: Boolean(arrived),
@@ -246,7 +256,6 @@ export class TrackingService {
     };
   }
 
-  // Legacy artisan-level tracking (REST rétrocompat)
   async updateLocation(artisanId: string, lat: number, lng: number): Promise<MissionPosition> {
     await syncArtisanGeo(artisanId, lat, lng);
     return {
@@ -260,12 +269,12 @@ export class TrackingService {
 
   async getLocation(artisanId: string): Promise<MissionPosition | null> {
     const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
-    if (!artisan?.currentLat || !artisan.currentLng) return null;
+    if (!artisan?.lat || !artisan?.lng) return null;
     return {
       missionId: "",
       artisanId,
-      lat: artisan.currentLat,
-      lng: artisan.currentLng,
+      lat: artisan.lat,
+      lng: artisan.lng,
       updatedAt: artisan.updatedAt.toISOString(),
     };
   }

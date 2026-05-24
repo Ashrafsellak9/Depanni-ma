@@ -41,8 +41,8 @@ export function jobCityRoom(city: string): string {
   return `city:${city.toLowerCase().trim()}`;
 }
 
-export function jobCategoryRoom(categoryId: string): string {
-  return `category:${categoryId}`;
+export function jobCategoryRoom(categorySlug: string): string {
+  return `category:${categorySlug}`;
 }
 
 export function citizenUserRoom(userId: string): string {

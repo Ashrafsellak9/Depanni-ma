@@ -14,8 +14,8 @@ export async function syncArtisanGeo(
   await prisma.$executeRaw`
     UPDATE artisans
     SET
-      "currentLat" = ${lat},
-      "currentLng" = ${lng},
+      lat = ${lat},
+      lng = ${lng},
       location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
     WHERE id = ${artisanId}
   `;
@@ -25,9 +25,9 @@ export interface NearbyArtisanRow {
   id: string;
   userId: string;
   rating: number;
-  artisanScore: number;
-  isVerified: boolean;
-  isTopArtisan: boolean;
+  totalMissions: number;
+  badgeVerified: boolean;
+  badgeTop: boolean;
   hourlyRate: number | null;
   distanceMeters: number;
   firstName: string;
@@ -39,36 +39,34 @@ export async function findNearbyArtisans(params: {
   lat: number;
   lng: number;
   radiusKm: number;
-  categoryId?: string;
+  categorySlug?: string;
   limit?: number;
 }): Promise<NearbyArtisanRow[]> {
   const radiusMeters = params.radiusKm * 1000;
   const limit = params.limit ?? 20;
 
-  if (params.categoryId) {
+  if (params.categorySlug) {
     return prisma.$queryRaw<NearbyArtisanRow[]>`
       SELECT
         a.id,
         a."userId",
         a.rating,
-        a."artisanScore",
-        a."isVerified",
-        a."isTopArtisan",
+        a."totalMissions",
+        a."badgeVerified",
+        a."badgeTop",
         a."hourlyRate",
         ST_Distance(
           a.location,
           ST_SetSRID(ST_MakePoint(${params.lng}, ${params.lat}), 4326)::geography
         ) AS "distanceMeters",
-        u."firstName",
-        u."lastName",
-        u."avatarUrl"
+        a."firstName",
+        a."lastName",
+        a.avatar AS "avatarUrl"
       FROM artisans a
-      INNER JOIN users u ON u.id = a."userId"
-      INNER JOIN artisan_categories ac ON ac."artisanId" = a.id
-      WHERE a."isAvailable" = true
-        AND a."verificationStatus" = 'APPROVED'::"ArtisanVerificationStatus"
+      WHERE a."availabilityStatus" = 'ONLINE'::"AvailabilityStatus"
+        AND a."kycStatus" = 'APPROVED'::"KycStatus"
         AND a.location IS NOT NULL
-        AND ac."categoryId" = ${params.categoryId}
+        AND ${params.categorySlug} = ANY(a.specialties)
         AND ST_DWithin(
           a.location,
           ST_SetSRID(ST_MakePoint(${params.lng}, ${params.lat}), 4326)::geography,
@@ -84,21 +82,20 @@ export async function findNearbyArtisans(params: {
       a.id,
       a."userId",
       a.rating,
-      a."artisanScore",
-      a."isVerified",
-      a."isTopArtisan",
+      a."totalMissions",
+      a."badgeVerified",
+      a."badgeTop",
       a."hourlyRate",
       ST_Distance(
         a.location,
         ST_SetSRID(ST_MakePoint(${params.lng}, ${params.lat}), 4326)::geography
       ) AS "distanceMeters",
-      u."firstName",
-      u."lastName",
-      u."avatarUrl"
+      a."firstName",
+      a."lastName",
+      a.avatar AS "avatarUrl"
     FROM artisans a
-    INNER JOIN users u ON u.id = a."userId"
-    WHERE a."isAvailable" = true
-      AND a."verificationStatus" = 'APPROVED'::"ArtisanVerificationStatus"
+    WHERE a."availabilityStatus" = 'ONLINE'::"AvailabilityStatus"
+      AND a."kycStatus" = 'APPROVED'::"KycStatus"
       AND a.location IS NOT NULL
       AND ST_DWithin(
         a.location,
@@ -110,7 +107,6 @@ export async function findNearbyArtisans(params: {
   `;
 }
 
-/** Fallback Redis GEORADIUS si PostGIS indisponible. */
 export async function findNearbyFromRedis(
   lat: number,
   lng: number,
@@ -136,13 +132,5 @@ export async function syncBaseLocationGeo(
   lat: number,
   lng: number,
 ): Promise<void> {
-  await prisma.$executeRaw`
-    UPDATE artisans
-    SET
-      "baseLat" = ${lat},
-      "baseLng" = ${lng},
-      location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
-    WHERE id = ${artisanId}
-  `;
   await syncArtisanGeo(artisanId, lat, lng);
 }

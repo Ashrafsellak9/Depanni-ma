@@ -1,6 +1,6 @@
 import { prisma } from "../../config/db.js";
+import { getCommissionRate, splitCommission } from "../payments/payments.commission.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
-import { chatService } from "../chat/chat.service.js";
 import { paymentsService } from "../payments/payments.service.js";
 import { citizenUserRoom, publishJobEvent } from "../jobs/jobs.events.js";
 import { closeOffersIfMaxReached } from "../jobs/jobs.diffusion.js";
@@ -12,13 +12,12 @@ export class OffersService {
 
     const artisan = await prisma.artisan.findUnique({
       where: artisanId ? { id: artisanId } : { userId: artisanUserId },
-      include: { categories: true },
     });
     if (!artisan) throw new ForbiddenError("Profil artisan requis");
-    if (artisan.verificationStatus !== "APPROVED") {
+    if (artisan.kycStatus !== "APPROVED") {
       throw new ForbiddenError("KYC non validé");
     }
-    if (!artisan.isAvailable) {
+    if (artisan.availabilityStatus !== "ONLINE") {
       throw new ForbiddenError("Activez votre disponibilité pour soumettre une offre");
     }
 
@@ -31,12 +30,11 @@ export class OffersService {
       throw new ConflictError("Nombre maximum d'offres atteint");
     }
 
-    const inCategory = artisan.categories.some((c) => c.categoryId === job.categoryId);
-    if (!inCategory) {
+    if (!artisan.specialties.includes(job.category)) {
       throw new ForbiddenError("Catégorie non couverte par votre profil");
     }
 
-    const inRadius = await this.isArtisanInJobRadius(artisan.id, job.id, job.diffusionRadiusKm);
+    const inRadius = await this.isArtisanInJobRadius(artisan.id, job.lat, job.lng);
     if (!inRadius) {
       throw new ForbiddenError("Hors zone de diffusion de la demande");
     }
@@ -53,17 +51,14 @@ export class OffersService {
         data: {
           jobId,
           artisanId: artisan.id,
-          amount: data.price,
-          currency: data.currency,
+          price: data.price,
           etaMinutes: data.eta_minutes,
           message: data.message,
           status: "PENDING",
         },
         include: {
           artisan: {
-            include: {
-              user: { select: { firstName: true, lastName: true, avatarUrl: true } },
-            },
+            select: { id: true, firstName: true, lastName: true, avatar: true },
           },
         },
       });
@@ -85,14 +80,19 @@ export class OffersService {
 
     await closeOffersIfMaxReached(jobId);
 
+    const citizen = await prisma.citizen.findUnique({
+      where: { id: job.citizenId },
+      select: { userId: true },
+    });
+
     await publishJobEvent({
       event: "job:offer:new",
-      rooms: [citizenUserRoom(job.citizenId)],
+      rooms: citizen ? [citizenUserRoom(citizen.userId)] : [],
       data: {
         jobId,
         offer: {
           id: offer.id,
-          amount: offer.amount,
+          price: offer.price,
           etaMinutes: offer.etaMinutes,
           message: offer.message,
           artisan: offer.artisan,
@@ -104,13 +104,17 @@ export class OffersService {
     return offer;
   }
 
-  async listByJob(jobId: string, requesterId: string, requesterRole: string) {
-    const job = await prisma.job.findUnique({ where: { id: jobId } });
+  async listByJob(jobId: string, requesterUserId: string, requesterRole: string) {
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: { citizen: { select: { userId: true } } },
+    });
     if (!job) throw new NotFoundError("Demande");
 
-    const artisan = await prisma.artisan.findUnique({ where: { userId: requesterId } });
+    const artisan = await prisma.artisan.findUnique({ where: { userId: requesterUserId } });
+    const isCitizen = job.citizen.userId === requesterUserId;
 
-    if (job.citizenId !== requesterId && requesterRole !== "ARTISAN" && requesterRole !== "ADMIN") {
+    if (!isCitizen && requesterRole !== "ARTISAN" && requesterRole !== "ADMIN") {
       throw new ForbiddenError();
     }
 
@@ -118,15 +122,13 @@ export class OffersService {
       where: { jobId },
       include: {
         artisan: {
-          include: {
-            user: { select: { firstName: true, lastName: true, avatarUrl: true, phone: true } },
-          },
+          select: { id: true, firstName: true, lastName: true, avatar: true, userId: true },
         },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    if (requesterRole === "CITIZEN" || job.citizenId === requesterId) {
+    if (isCitizen || requesterRole === "ADMIN") {
       return offers;
     }
 
@@ -150,6 +152,17 @@ export class OffersService {
     });
     if (!offer) throw new NotFoundError("Offre");
 
+    const tier =
+      (
+        await prisma.artisan.findUnique({
+          where: { id: offer.artisanId },
+          select: { subscriptionTier: true },
+        })
+      )?.subscriptionTier ?? "STANDARD";
+
+    const rate = getCommissionRate(tier);
+    const { artisanNet, depanniRevenue } = splitCommission(offer.price, rate);
+
     const result = await prisma.$transaction(async (tx) => {
       await tx.offer.updateMany({
         where: { jobId, id: { not: offerId }, status: "PENDING" },
@@ -165,32 +178,49 @@ export class OffersService {
         where: { id: jobId },
         data: {
           status: "ACTIVE",
-          acceptedOfferId: offerId,
           acceptsOffers: false,
         },
       });
 
-      return { accepted, job: updatedJob };
+      const mission = await tx.mission.create({
+        data: {
+          jobId,
+          offerId,
+          citizenId,
+          artisanId: offer.artisanId,
+          status: "ACCEPTED",
+          totalAmount: offer.price,
+          commissionAmount: depanniRevenue,
+          artisanNet,
+        },
+      });
+
+      return { accepted, job: updatedJob, mission };
     });
 
-    await chatService.getOrCreateConversation(jobId);
-    await paymentsService.onOfferAccepted(jobId, offer.artisanId);
+    await paymentsService.onOfferAccepted(result.mission.id, offer.artisanId);
 
-    await publishJobEvent({
-      event: "job:status",
-      rooms: [citizenUserRoom(citizenId)],
-      data: { jobId, status: "ACTIVE", acceptedOfferId: offerId },
+    const citizen = await prisma.citizen.findUnique({
+      where: { id: citizenId },
+      select: { userId: true },
     });
-
     const artisan = await prisma.artisan.findUnique({
       where: { id: offer.artisanId },
       select: { userId: true },
     });
+
+    if (citizen) {
+      await publishJobEvent({
+        event: "job:status",
+        rooms: [citizenUserRoom(citizen.userId)],
+        data: { jobId, missionId: result.mission.id, status: "ACTIVE" },
+      });
+    }
     if (artisan) {
       await publishJobEvent({
         event: "job:status",
         rooms: [citizenUserRoom(artisan.userId)],
-        data: { jobId, status: "ACTIVE", acceptedOfferId: offerId },
+        data: { jobId, missionId: result.mission.id, status: "ACTIVE" },
       });
     }
 
@@ -214,31 +244,34 @@ export class OffersService {
   }
 
   async complete(jobId: string, offerId: string, userId: string, role: string) {
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-      include: { acceptedOffer: true },
+    const mission = await prisma.mission.findUnique({
+      where: { jobId },
+      include: {
+        job: true,
+        offer: { include: { artisan: true } },
+        citizen: { select: { userId: true } },
+      },
     });
-    if (!job) throw new NotFoundError("Demande");
-    if (!["ACTIVE", "IN_PROGRESS"].includes(job.status)) {
+    if (!mission) throw new NotFoundError("Mission");
+
+    if (!["ACTIVE", "IN_PROGRESS"].includes(mission.job.status)) {
       throw new ConflictError("La mission ne peut pas être terminée dans cet état");
     }
 
-    const offer = await prisma.offer.findFirst({
-      where: { id: offerId, jobId, status: "ACCEPTED" },
-      include: { artisan: true },
-    });
-    if (!offer) throw new NotFoundError("Offre acceptée");
+    if (mission.offerId !== offerId) {
+      throw new NotFoundError("Offre acceptée");
+    }
 
-    const isCitizen = job.citizenId === userId;
-    const isArtisan = offer.artisan.userId === userId;
+    const isCitizen = mission.citizen.userId === userId;
+    const isArtisan = mission.offer.artisan.userId === userId;
     if (!isCitizen && !isArtisan && role !== "ADMIN") {
       throw new ForbiddenError();
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const completedOffer = await tx.offer.update({
-        where: { id: offerId },
-        data: { status: "COMPLETED" },
+      const completedMission = await tx.mission.update({
+        where: { id: mission.id },
+        data: { status: "COMPLETED", completedAt: new Date() },
       });
 
       const completedJob = await tx.job.update({
@@ -247,24 +280,24 @@ export class OffersService {
       });
 
       await tx.artisan.update({
-        where: { id: offer.artisanId },
-        data: { completedJobs: { increment: 1 } },
+        where: { id: mission.artisanId },
+        data: { totalMissions: { increment: 1 } },
       });
 
-      return { offer: completedOffer, job: completedJob };
+      return { mission: completedMission, job: completedJob };
     });
 
     await publishJobEvent({
       event: "job:status",
       rooms: [
-        citizenUserRoom(job.citizenId),
-        citizenUserRoom(offer.artisan.userId),
+        citizenUserRoom(mission.citizen.userId),
+        citizenUserRoom(mission.offer.artisan.userId),
       ],
-      data: { jobId, status: "COMPLETED" },
+      data: { jobId, missionId: mission.id, status: "COMPLETED" },
     });
 
     if (isCitizen) {
-      await paymentsService.onMissionCompleted(jobId, userId);
+      await paymentsService.onMissionCompleted(mission.id, mission.citizenId);
     }
 
     return result;
@@ -272,21 +305,19 @@ export class OffersService {
 
   private async isArtisanInJobRadius(
     artisanId: string,
-    jobId: string,
-    radiusKm: number,
+    jobLat: number,
+    jobLng: number,
   ): Promise<boolean> {
-    const radiusMeters = radiusKm * 1000;
+    const radiusMeters = 10 * 1000;
     const rows = await prisma.$queryRaw<{ ok: boolean }[]>`
       SELECT EXISTS (
         SELECT 1
         FROM artisans a
-        INNER JOIN jobs j ON j.id = ${jobId}
         WHERE a.id = ${artisanId}
           AND a.location IS NOT NULL
-          AND j.location IS NOT NULL
           AND ST_DWithin(
             a.location,
-            j.location,
+            ST_SetSRID(ST_MakePoint(${jobLng}, ${jobLat}), 4326)::geography,
             ${radiusMeters}
           )
       ) AS ok

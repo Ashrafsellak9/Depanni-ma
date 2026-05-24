@@ -1,13 +1,15 @@
 import type { Request, Response } from "express";
 
+import { getCitizenIdByUserId } from "../../utils/profile.js";
 import { getParam } from "../../utils/params.js";
 import { sendCreated, sendSuccess } from "../../utils/response.js";
 import { jobsService } from "./jobs.service.js";
 
 export class JobsController {
   create = async (req: Request, res: Response): Promise<void> => {
+    const citizenId = await getCitizenIdByUserId(req.user!.id);
     const photos = req.files as Express.Multer.File[] | undefined;
-    const job = await jobsService.create(req.user!.id, req.body, photos);
+    const job = await jobsService.create(citizenId, req.body, photos);
     sendCreated(res, job);
   };
 
@@ -21,12 +23,14 @@ export class JobsController {
   };
 
   listMy = async (req: Request, res: Response): Promise<void> => {
-    const result = await jobsService.listMy(req.user!.id, req.query);
+    const citizenId = await getCitizenIdByUserId(req.user!.id);
+    const result = await jobsService.listMy(citizenId, req.query);
     sendSuccess(res, result);
   };
 
   cancel = async (req: Request, res: Response): Promise<void> => {
-    const job = await jobsService.cancel(getParam(req, "id"), req.user!.id);
+    const citizenId = await getCitizenIdByUserId(req.user!.id);
+    const job = await jobsService.cancel(getParam(req, "id"), citizenId);
     sendSuccess(res, job);
   };
 
@@ -55,19 +59,21 @@ export class JobsController {
   };
 
   acceptOffer = async (req: Request, res: Response): Promise<void> => {
+    const citizenId = await getCitizenIdByUserId(req.user!.id);
     const result = await jobsService.acceptOffer(
       getParam(req, "jobId"),
       getParam(req, "offerId"),
-      req.user!.id,
+      citizenId,
     );
     sendSuccess(res, result);
   };
 
   rejectOffer = async (req: Request, res: Response): Promise<void> => {
+    const citizenId = await getCitizenIdByUserId(req.user!.id);
     const offer = await jobsService.rejectOffer(
       getParam(req, "jobId"),
       getParam(req, "offerId"),
-      req.user!.id,
+      citizenId,
     );
     sendSuccess(res, offer);
   };

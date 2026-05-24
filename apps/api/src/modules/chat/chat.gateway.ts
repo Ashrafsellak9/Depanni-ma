@@ -13,10 +13,13 @@ export function registerChatGateway(chatNs: Namespace): void {
 
     socket.on("chat:join", async (payload: { missionId: string }) => {
       try {
-        await chatService.assertMissionAccess(payload.missionId, userId, socket.data.role as string);
-        await chatService.getOrCreateConversation(payload.missionId);
-        await socket.join(missionRoom(payload.missionId));
-        socket.data.missionId = payload.missionId;
+        const access = await chatService.assertMissionAccess(
+          payload.missionId,
+          userId,
+          socket.data.role as string,
+        );
+        await socket.join(missionRoom(access.mission.id));
+        socket.data.missionId = access.mission.id;
       } catch (err) {
         socket.emit("chat:error", { message: String(err) });
       }

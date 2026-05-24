@@ -17,7 +17,12 @@
     "db:deploy": "dotenv -e ../../.env -o -- prisma migrate deploy",
     "db:studio": "dotenv -e ../../.env -o -- prisma studio",
     "db:push": "dotenv -e ../../.env -o -- prisma db push",
+    "db:seed": "dotenv -e ../../.env -o -- tsx prisma/seed.ts",
+    "db:reset": "dotenv -e ../../.env -o -- prisma migrate reset",
     "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@depanni/types": "workspace:*",

@@ -31,6 +31,6 @@ paymentsAdminRoutes.post(
   asyncHandler(paymentsController.adminInitiateRefund),
 );
 paymentsAdminRoutes.post(
-  "/refunds/:refundId/execute",
+  "/payments/:paymentId/refund/execute",
   asyncHandler(paymentsController.adminExecuteRefund),
 );

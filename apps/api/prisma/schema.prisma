@@ -1,4 +1,5 @@
-// DEPANNI.ma — Prisma schema (PostgreSQL 16 + PostGIS)
+// DEPANNI.ma — Schéma Prisma complet (PostgreSQL 16 + PostGIS)
+// Après changement majeur : prisma migrate reset && prisma db seed
 
 generator client {
   provider        = "prisma-client-js"
@@ -11,43 +12,30 @@ datasource db {
   extensions = [postgis]
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
 enum UserRole {
   CITIZEN
   ARTISAN
   ADMIN
 }
 
-enum UserStatus {
-  PENDING
-  ACTIVE
-  SUSPENDED
-  BANNED
-}
-
-enum AddressLabel {
-  HOME
-  OFFICE
-  OTHER
-}
-
-enum ArtisanVerificationStatus {
-  UNVERIFIED
+enum KycStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-enum EarningStatus {
-  PENDING
-  PAID
-  CANCELLED
+enum SubscriptionTier {
+  STANDARD
+  PREMIUM
+  PRO
 }
 
-enum PayoutStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
+enum AvailabilityStatus {
+  OFFLINE
+  ONLINE
+  BUSY
 }
 
 enum JobStatus {
@@ -59,33 +47,32 @@ enum JobStatus {
   EXPIRED
 }
 
+enum JobUrgency {
+  NOW
+  IN2H
+  SCHEDULED
+}
+
 enum OfferStatus {
   PENDING
   ACCEPTED
   REJECTED
+  WITHDRAWN
+}
+
+enum MissionStatus {
+  ACCEPTED
+  IN_PROGRESS
   COMPLETED
   CANCELLED
-}
-
-enum MessageType {
-  TEXT
-  IMAGE
-  AUDIO
-  TEMPLATE
-  LOCATION
-  SYSTEM
-}
-
-enum ArtisanSubscriptionTier {
-  STANDARD
-  PREMIUM
-  PRO
+  DISPUTED
 }
 
 enum PaymentMethod {
   CARD
   CASH
   WALLET
+  MOBILE_MONEY
 }
 
 enum PaymentStatus {
@@ -99,248 +86,305 @@ enum PaymentStatus {
   FROZEN
 }
 
-enum WalletTransactionType {
-  TOPUP
-  ESCROW_HOLD
-  ESCROW_RELEASE
+enum WalletTxType {
+  CREDIT
+  DEBIT
   COMMISSION
   PAYOUT
   REFUND
-  ADJUSTMENT
+  TOPUP
 }
 
-enum RefundStatus {
-  INITIATED
-  EXECUTED
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  DONE
   FAILED
 }
 
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  TEMPLATE
+  LOCATION
+  SYSTEM
+}
+
+enum ReviewTargetType {
+  ARTISAN
+  CITIZEN
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+}
+
+enum OtpPurpose {
+  REGISTER
+  LOGIN
+  RESET
+  VERIFY_PHONE
+}
+
+// ─── Auth & users ────────────────────────────────────────────────────────────
+
 model User {
-  id             String         @id @default(uuid())
-  email          String         @unique
-  phone          String         @unique
-  passwordHash   String
-  firstName      String
-  lastName       String
-  avatarUrl      String?
-  bio            String?
-  role           UserRole       @default(CITIZEN)
-  status         UserStatus     @default(PENDING)
-  locale         String         @default("fr")
-  emailVerified  Boolean        @default(false)
-  phoneVerified  Boolean        @default(false)
+  id           String    @id @default(uuid())
+  phone        String    @unique
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(CITIZEN)
+  isVerified   Boolean   @default(false)
+  locale       String    @default("fr")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  citizen        Citizen?
   artisan        Artisan?
-  jobs           Job[]          @relation("CitizenJobs")
-  addresses      UserAddress[]
-  reviewsGiven   Review[]       @relation("CitizenReviews")
-  messagesSent   Message[]      @relation("MessagesSent")
-  messageReads   MessageRead[]
   refreshTokens  RefreshToken[]
-  wallet         Wallet?
-  payments       Payment[]      @relation("CitizenPayments")
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  notifications  Notification[]
+  messagesSent   Message[]      @relation("MessagesSent")
+  reviewsAuthored Review[]      @relation("ReviewsAuthored")
 
   @@map("users")
 }
 
-model UserAddress {
-  id         String       @id @default(uuid())
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label      AddressLabel @default(HOME)
-  street     String?
-  city       String
-  region     String?
-  postalCode String?
-  country    String       @default("MA")
-  formatted  String
-  lat        Float
-  lng        Float
-  isDefault  Boolean      @default(false)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-
-  @@index([userId])
-  @@map("user_addresses")
-}
-
 model RefreshToken {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  jti       String   @unique
-  familyId  String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  jti        String   @unique
+  familyId   String
+  expiresAt  DateTime
+  isRevoked  Boolean  @default(false)
+  deviceInfo String?
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([familyId])
   @@map("refresh_tokens")
 }
 
+model OtpCode {
+  id        String     @id @default(uuid())
+  phone     String
+  code      String
+  purpose   OtpPurpose
+  expiresAt DateTime
+  attempts  Int        @default(0)
+  isUsed    Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@map("otp_codes")
+}
+
+// ─── Profils ─────────────────────────────────────────────────────────────────
+
+model Citizen {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  avatar    String?
+  addresses Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs     Job[]
+  missions Mission[] @relation("MissionCitizen")
+  payments Payment[]
+
+  @@map("citizens")
+}
+
+model Artisan {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName          String
+  lastName           String
+  avatar             String?
+  bio                String?
+  specialties        String[]           @default([])
+  kycStatus          KycStatus          @default(PENDING)
+  kycDocUrls         String[]           @default([])
+  subscriptionTier   SubscriptionTier   @default(STANDARD)
+  lat                Float?
+  lng                Float?
+  // Colonne SQL `location geography(Point,4326)` + GIST — voir migration & seed
+  rating             Float              @default(0)
+  totalMissions      Int                @default(0)
+  badgeVerified      Boolean            @default(false)
+  badgeTop           Boolean            @default(false)
+  availabilityStatus AvailabilityStatus @default(OFFLINE)
+  zones              String[]           @default([])
+  serviceRadiusKm    Float              @default(15)
+  hourlyRate         Float?
+  cinNumber          String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  offers        Offer[]
+  missions      Mission[]            @relation("MissionArtisan")
+  wallet        Wallet?
+  walletTx      WalletTransaction[]
+  payouts       Payout[]
+  subscriptions ArtisanSubscription[]
+  payments      Payment[]
+
+  @@index([kycStatus])
+  @@index([availabilityStatus])
+  @@map("artisans")
+}
+
+model ArtisanSubscription {
+  id        String           @id @default(uuid())
+  artisanId String
+  artisan   Artisan          @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  tier      SubscriptionTier
+  price     Float
+  startedAt DateTime         @default(now())
+  expiresAt DateTime
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+
+  @@index([artisanId, isActive])
+  @@map("artisan_subscriptions")
+}
+
+// ─── Marketplace ─────────────────────────────────────────────────────────────
+
 model ServiceCategory {
-  id        String            @id @default(uuid())
-  slug      String            @unique
+  id        String   @id @default(uuid())
+  slug      String   @unique
   nameFr    String
   nameAr    String?
-  artisans  ArtisanCategory[]
-  jobs      Job[]
-  createdAt DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@map("service_categories")
 }
 
-model ArtisanCategory {
-  artisanId  String
-  categoryId String
-  artisan    Artisan         @relation(fields: [artisanId], references: [id], onDelete: Cascade)
-  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+model Job {
+  id          String     @id @default(uuid())
+  citizenId   String
+  citizen     Citizen    @relation(fields: [citizenId], references: [id])
+  category    String
+  subcategory String?
+  title       String
+  description String
+  photos      String[]   @default([])
+  lat         Float
+  lng         Float
+  address     String
+  city        String     @default("Casablanca")
+  urgency     JobUrgency @default(NOW)
+  budgetMin   Float?
+  budgetMax   Float?
+  status      JobStatus  @default(PENDING)
+  scheduledAt DateTime?
+  expiresAt   DateTime?
+  offerCount  Int        @default(0)
+  maxOffers   Int        @default(10)
+  acceptsOffers Boolean  @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
-  @@id([artisanId, categoryId])
-  @@map("artisan_categories")
+  offers  Offer[]
+  mission Mission?
+
+  @@index([lat, lng])
+  @@index([status, category])
+  @@index([citizenId])
+  @@map("jobs")
 }
 
-model Artisan {
-  id                 String                    @id @default(uuid())
-  userId             String                    @unique
-  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verificationStatus ArtisanVerificationStatus @default(UNVERIFIED)
-  rejectionReason    String?
-  isVerified         Boolean                   @default(false)
-  isTopArtisan       Boolean                   @default(false)
-  cinNumber          String?
-  cinDocumentUrl     String?
-  cinRectoUrl        String?
-  cinVersoUrl        String?
-  tradeLicenseUrl    String?
-  diplomaUrl         String?
-  bio                String?
-  specialties        String[]                  @default([])
-  zones              String[]                  @default([])
-  hourlyRate         Float?
-  serviceRadiusKm    Float                     @default(15)
-  baseLat            Float?
-  baseLng            Float?
-  currentLat         Float?
-  currentLng         Float?
-  isAvailable        Boolean                   @default(false)
-  rating             Float                     @default(0)
-  artisanScore       Float                     @default(0)
-  completionRate     Float                     @default(0)
-  avgResponseTimeSec Int                       @default(0)
-  cancellationRate   Float                     @default(0)
-  completedJobs      Int                       @default(0)
-  totalEarnings      Float                     @default(0)
-  subscriptionTier   ArtisanSubscriptionTier   @default(STANDARD)
-  categories         ArtisanCategory[]
-  offers             Offer[]
-  reviews            Review[]
-  earnings           ArtisanEarning[]
-  payouts            Payout[]
-  payments           Payment[]
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
-
-  @@map("artisans")
-}
-
-model Review {
-  id        String   @id @default(uuid())
+model Offer {
+  id        String      @id @default(uuid())
+  jobId     String
+  job       Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
   artisanId String
-  artisan   Artisan  @relation(fields: [artisanId], references: [id], onDelete: Cascade)
-  citizenId String
-  citizen   User     @relation("CitizenReviews", fields: [citizenId], references: [id])
-  jobId     String?
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
+  artisan   Artisan     @relation(fields: [artisanId], references: [id])
+  price     Float
+  etaMinutes Int?
+  message   String?
+  status    OfferStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  @@index([artisanId])
-  @@map("reviews")
+  mission Mission?
+
+  @@unique([jobId, artisanId])
+  @@index([artisanId, status])
+  @@index([jobId])
+  @@map("offers")
 }
 
-model ArtisanEarning {
-  id          String        @id @default(uuid())
-  artisanId   String
-  artisan     Artisan       @relation(fields: [artisanId], references: [id], onDelete: Cascade)
-  jobId       String?
-  grossAmount Float
-  commission  Float
-  netAmount   Float
-  status      EarningStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  paidAt      DateTime?
-
-  @@index([artisanId])
-  @@map("artisan_earnings")
-}
-
-model Wallet {
-  id           String              @id @default(uuid())
-  userId       String              @unique
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance      Float               @default(0)
-  currency     String              @default("MAD")
-  transactions WalletTransaction[]
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-
-  @@map("wallets")
-}
-
-model WalletTransaction {
-  id           String                @id @default(uuid())
-  walletId     String
-  wallet       Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  type         WalletTransactionType
-  amount       Float
-  balanceAfter Float
-  paymentId    String?
-  payment      Payment?              @relation(fields: [paymentId], references: [id])
-  reference    String?
-  metadata     Json?
-  createdAt    DateTime              @default(now())
-
-  @@index([walletId])
-  @@index([paymentId])
-  @@map("wallet_transactions")
-}
-
-model Payment {
+model Mission {
   id               String        @id @default(uuid())
-  idempotencyKey   String        @unique
-  jobId            String
+  jobId            String        @unique
   job              Job           @relation(fields: [jobId], references: [id])
+  offerId          String        @unique
+  offer            Offer         @relation(fields: [offerId], references: [id])
   citizenId        String
-  citizen          User          @relation("CitizenPayments", fields: [citizenId], references: [id])
-  artisanId        String?
-  artisan          Artisan?      @relation(fields: [artisanId], references: [id])
-  method           PaymentMethod
-  status           PaymentStatus @default(PENDING)
-  amount           Float
-  currency         String        @default("MAD")
-  commissionRate   Float
+  citizen          Citizen       @relation("MissionCitizen", fields: [citizenId], references: [id])
+  artisanId        String
+  artisan          Artisan       @relation("MissionArtisan", fields: [artisanId], references: [id])
+  status           MissionStatus @default(ACCEPTED)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  artisanLat       Float?
+  artisanLng       Float?
+  totalAmount      Float
   commissionAmount Float         @default(0)
-  artisanNetAmount Float         @default(0)
-  cmiOrderId       String?       @unique
-  cmiTransactionId String?
-  heldAt           DateTime?
-  escrowAt         DateTime?
-  releasedAt       DateTime?
-  refundedAt       DateTime?
-  disputeOpenedAt  DateTime?
-  disputeResolveBy DateTime?
-  auditLogs        PaymentAuditLog[]
-  walletTx         WalletTransaction[]
-  refunds          Refund[]
+  artisanNet       Float         @default(0)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
-  @@index([jobId])
+  payments Payment[]
+  messages Message[]
+  reviews  Review[]
+
   @@index([citizenId])
   @@index([artisanId])
+  @@index([status])
+  @@map("missions")
+}
+
+// ─── Paiements & wallet ──────────────────────────────────────────────────────
+
+model Payment {
+  id               String        @id @default(uuid())
+  idempotencyKey   String?       @unique
+  missionId        String
+  mission          Mission       @relation(fields: [missionId], references: [id])
+  citizenId        String
+  citizen          Citizen       @relation(fields: [citizenId], references: [id])
+  artisanId        String?
+  artisan          Artisan?      @relation(fields: [artisanId], references: [id])
+  amount           Float
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  cmiRef           String?       @unique
+  commissionRate   Float         @default(0.15)
+  commissionAmount Float         @default(0)
+  artisanNetAmount Float         @default(0)
+  currency         String        @default("MAD")
+  heldAt           DateTime?
+  releasedAt       DateTime?
+  refundedAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  auditLogs PaymentAuditLog[]
+
+  @@index([missionId])
+  @@index([citizenId])
   @@index([status])
   @@map("payments")
 }
@@ -358,19 +402,33 @@ model PaymentAuditLog {
   @@map("payment_audit_logs")
 }
 
-model Refund {
-  id          String       @id @default(uuid())
-  paymentId   String
-  payment     Payment      @relation(fields: [paymentId], references: [id])
-  amount      Float
-  status      RefundStatus @default(INITIATED)
-  reason      String?
-  initiatedBy String
-  executedAt  DateTime?
-  createdAt   DateTime     @default(now())
+model Wallet {
+  id        String   @id @default(uuid())
+  artisanId String   @unique
+  artisan   Artisan  @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  balance   Float    @default(0)
+  currency  String   @default("MAD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([paymentId])
-  @@map("refunds")
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id            String       @id @default(uuid())
+  artisanId     String
+  artisan       Artisan      @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  type          WalletTxType
+  amount        Float
+  balanceBefore Float
+  balanceAfter  Float
+  reference     String?
+  description   String?
+  createdAt     DateTime     @default(now())
+
+  @@index([artisanId])
+  @@index([reference])
+  @@map("wallet_transactions")
 }
 
 model Payout {
@@ -378,117 +436,72 @@ model Payout {
   artisanId   String
   artisan     Artisan      @relation(fields: [artisanId], references: [id], onDelete: Cascade)
   amount      Float
+  bankDetails Json?
   status      PayoutStatus @default(PENDING)
   reference   String?
   batchId     String?
   initiatedBy String?
-  metadata    Json?
+  processedAt DateTime?
   createdAt   DateTime     @default(now())
-  completedAt DateTime?
 
   @@index([artisanId])
+  @@index([status])
   @@index([batchId])
   @@map("payouts")
 }
 
-model Job {
-  id                String           @id @default(uuid())
-  citizenId         String
-  citizen           User             @relation("CitizenJobs", fields: [citizenId], references: [id])
-  categoryId        String
-  category          ServiceCategory  @relation(fields: [categoryId], references: [id])
-  subcategory       String?
-  title             String
-  description       String
-  photos            String[]         @default([])
-  status            JobStatus        @default(PENDING)
-  urgency           String           @default("NORMAL")
-  locationLat       Float
-  locationLng       Float
-  address           String
-  city              String
-  currency          String           @default("MAD")
-  budgetMin         Float?
-  budgetMax         Float?
-  diffusionRadiusKm Float            @default(2)
-  offerCount        Int              @default(0)
-  maxOffers         Int              @default(10)
-  acceptsOffers     Boolean          @default(true)
-  expiresAt         DateTime?
-  scheduledAt       DateTime?
-  acceptedOfferId   String?          @unique
-  acceptedOffer     Offer?           @relation("AcceptedJobOffer", fields: [acceptedOfferId], references: [id])
-  offers            Offer[]          @relation("JobOffers")
-  conversation      Conversation?
-  payments          Payment[]
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  @@index([citizenId])
-  @@index([status])
-  @@index([city])
-  @@index([categoryId])
-  @@map("jobs")
-}
-
-model Offer {
-  id         String      @id @default(uuid())
-  jobId      String
-  job        Job         @relation("JobOffers", fields: [jobId], references: [id], onDelete: Cascade)
-  acceptedForJob Job?    @relation("AcceptedJobOffer")
-  artisanId  String
-  artisan    Artisan     @relation(fields: [artisanId], references: [id])
-  amount     Float
-  currency   String      @default("MAD")
-  etaMinutes Int?
-  message    String?
-  status     OfferStatus @default(PENDING)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-
-  @@unique([jobId, artisanId])
-  @@index([jobId])
-  @@map("offers")
-}
-
-model Conversation {
-  id        String    @id @default(uuid())
-  jobId     String    @unique
-  job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@map("conversations")
-}
+// ─── Chat & avis ─────────────────────────────────────────────────────────────
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  sender         User         @relation("MessagesSent", fields: [senderId], references: [id])
-  type           MessageType  @default(TEXT)
-  content        String?
-  mediaUrl       String?
-  templateId     String?
-  metadata       Json?
-  deletedAt      DateTime?
-  createdAt      DateTime     @default(now())
-  readBy         MessageRead[]
+  id         String      @id @default(uuid())
+  missionId  String
+  mission    Mission     @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User        @relation("MessagesSent", fields: [senderId], references: [id])
+  type       MessageType @default(TEXT)
+  content    String?
+  fileUrl    String?
+  isRead     Boolean     @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime    @default(now())
 
-  @@index([conversationId, createdAt])
+  @@index([missionId])
   @@index([senderId])
   @@map("messages")
 }
 
-model MessageRead {
-  messageId String
-  userId    String
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  readAt    DateTime @default(now())
+model Review {
+  id         String           @id @default(uuid())
+  missionId  String
+  mission    Mission          @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User             @relation("ReviewsAuthored", fields: [authorId], references: [id])
+  targetId   String
+  targetType ReviewTargetType
+  rating     Int
+  comment    String?
+  criteria   Json?
+  createdAt  DateTime         @default(now())
 
-  @@id([messageId, userId])
-  @@map("message_reads")
+  @@index([missionId])
+  @@index([targetId, targetType])
+  @@map("reviews")
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean             @default(false)
+  channel   NotificationChannel @default(PUSH)
+  createdAt DateTime            @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
 }

@@ -19,7 +19,7 @@ export function startPayoutWorker(): Worker<PayoutJobData> {
       const { payoutId } = job.data;
       await prisma.payout.update({
         where: { id: payoutId },
-        data: { status: "COMPLETED", completedAt: new Date() },
+        data: { status: "DONE", processedAt: new Date() },
       });
       logger.info("Payout processed", { payoutId, artisanId: job.data.artisanId });
     },
@@ -30,7 +30,7 @@ export function startPayoutWorker(): Worker<PayoutJobData> {
     if (job?.data.payoutId) {
       void prisma.payout.update({
         where: { id: job.data.payoutId },
-        data: { status: "FAILED", metadata: { error: err.message } },
+        data: { status: "FAILED" },
       });
     }
   });

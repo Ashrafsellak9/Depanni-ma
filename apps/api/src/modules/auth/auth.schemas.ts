@@ -35,7 +35,7 @@ export const registerArtisanSchema = z.object({
 export const verifyOtpSchema = z.object({
   phone: moroccanPhoneSchema,
   code: z.string().regex(/^\d{6}$/, "Code OTP à 6 chiffres"),
-  purpose: z.enum(["REGISTER", "RESET_PASSWORD", "VERIFY_PHONE"]),
+  purpose: z.enum(["REGISTER", "RESET", "VERIFY_PHONE"]),
 });
 
 export const loginSchema = z.object({

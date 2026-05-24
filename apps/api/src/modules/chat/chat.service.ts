@@ -6,20 +6,19 @@ import { getChatNamespace } from "../../socket/index.js";
 import { missionRoom } from "../../socket/socketAuth.js";
 import { processAndUploadImage, uploadPrivateFile } from "../../middleware/upload.js";
 import { ForbiddenError, NotFoundError } from "../../utils/errors.js";
+import { mapSenderProfile, senderUserSelect } from "../../utils/profile.js";
 import { sendMessageSchema, messagesQuerySchema, type SendMessageInput } from "./chat.schemas.js";
 
 const RETENTION_MONTHS = 12;
 
 export interface MessageDto {
   id: string;
-  conversationId: string;
   missionId: string;
   senderId: string;
   type: MessageType;
   content: string | null;
-  mediaUrl: string | null;
-  templateId: string | null;
-  metadata: unknown;
+  fileUrl: string | null;
+  isRead: boolean;
   createdAt: string;
   sender?: { id: string; firstName: string; lastName: string; avatarUrl: string | null };
 }
@@ -31,85 +30,96 @@ export class ChatService {
     return d;
   }
 
-  private unreadKey(conversationId: string, userId: string): string {
-    return `chat:unread:${conversationId}:${userId}`;
+  private unreadKey(missionId: string, userId: string): string {
+    return `chat:unread:${missionId}:${userId}`;
   }
 
   async assertMissionAccess(missionId: string, userId: string, role: string): Promise<{
-    job: { id: string; citizenId: string; status: string };
+    mission: { id: string; jobId: string; status: string };
+    citizenUserId: string;
     artisanUserId: string | null;
   }> {
-    const job = await prisma.job.findUnique({
+    const mission = await prisma.mission.findUnique({
       where: { id: missionId },
       include: {
-        acceptedOffer: { include: { artisan: { select: { userId: true } } } },
+        job: { select: { status: true } },
+        citizen: { select: { userId: true } },
+        artisan: { select: { userId: true } },
       },
     });
-    if (!job) throw new NotFoundError("Mission");
+    if (!mission) throw new NotFoundError("Mission");
 
-    const artisanUserId = job.acceptedOffer?.artisan.userId ?? null;
-    const isCitizen = job.citizenId === userId;
-    const isArtisan = artisanUserId === userId;
+    const isCitizen = mission.citizen.userId === userId;
+    const isArtisan = mission.artisan.userId === userId;
 
     if (!isCitizen && !isArtisan && role !== "ADMIN") {
       throw new ForbiddenError("Accès conversation refusé");
     }
 
-    if (!["ACTIVE", "IN_PROGRESS", "COMPLETED"].includes(job.status) && role !== "ADMIN") {
+    const jobStatus = mission.job.status;
+    if (!["ACTIVE", "IN_PROGRESS", "COMPLETED"].includes(jobStatus) && role !== "ADMIN") {
       throw new ForbiddenError("Chat disponible après acceptation de l'offre");
     }
 
-    return { job: { id: job.id, citizenId: job.citizenId, status: job.status }, artisanUserId };
+    return {
+      mission: { id: mission.id, jobId: mission.jobId, status: mission.status },
+      citizenUserId: mission.citizen.userId,
+      artisanUserId: mission.artisan.userId,
+    };
   }
 
-  async getOrCreateConversation(missionId: string): Promise<{ id: string; jobId: string }> {
-    return prisma.conversation.upsert({
-      where: { jobId: missionId },
-      create: { jobId: missionId },
-      update: {},
-      select: { id: true, jobId: true },
-    });
+  /** missionId = id Mission (ou jobId résolu vers mission). */
+  async resolveMissionId(missionOrJobId: string): Promise<string> {
+    const byId = await prisma.mission.findUnique({ where: { id: missionOrJobId } });
+    if (byId) return byId.id;
+    const byJob = await prisma.mission.findUnique({ where: { jobId: missionOrJobId } });
+    if (byJob) return byJob.id;
+    throw new NotFoundError("Mission");
   }
 
   async getParticipantIds(missionId: string): Promise<string[]> {
-    const job = await prisma.job.findUnique({
+    const mission = await prisma.mission.findUnique({
       where: { id: missionId },
-      include: { acceptedOffer: { include: { artisan: { select: { userId: true } } } } },
+      include: {
+        citizen: { select: { userId: true } },
+        artisan: { select: { userId: true } },
+      },
     });
-    if (!job) return [];
-    const ids = [job.citizenId];
-    if (job.acceptedOffer?.artisan.userId) ids.push(job.acceptedOffer.artisan.userId);
-    return ids;
+    if (!mission) return [];
+    return [mission.citizen.userId, mission.artisan.userId];
   }
 
-  toDto(message: Message & { sender?: { id: string; firstName: string; lastName: string; avatarUrl: string | null } }, missionId: string): MessageDto {
+  toDto(
+    message: Message & {
+      sender?: { id: string; firstName: string; lastName: string; avatarUrl: string | null };
+    },
+    missionId: string,
+  ): MessageDto {
     return {
       id: message.id,
-      conversationId: message.conversationId,
       missionId,
       senderId: message.senderId,
       type: message.type,
       content: message.content,
-      mediaUrl: message.mediaUrl,
-      templateId: message.templateId,
-      metadata: message.metadata,
+      fileUrl: message.fileUrl,
+      isRead: message.isRead,
       createdAt: message.createdAt.toISOString(),
       sender: message.sender,
     };
   }
 
   async sendMessage(
-    missionId: string,
+    missionOrJobId: string,
     senderId: string,
     role: string,
     input: unknown,
     mediaFile?: Express.Multer.File,
   ): Promise<MessageDto> {
+    const missionId = await this.resolveMissionId(missionOrJobId);
     await this.assertMissionAccess(missionId, senderId, role);
     const data: SendMessageInput = sendMessageSchema.parse(input);
-    const conversation = await this.getOrCreateConversation(missionId);
 
-    let mediaUrl = data.mediaUrl;
+    let fileUrl = data.mediaUrl;
     if (mediaFile) {
       const isAudio = mediaFile.mimetype.startsWith("audio/");
       if (isAudio) {
@@ -120,49 +130,43 @@ export class ChatService {
           mediaFile.mimetype,
           ext,
         );
-        mediaUrl = uploaded.url;
+        fileUrl = uploaded.url;
       } else {
         const uploaded = await processAndUploadImage(mediaFile.buffer, `chat/${missionId}`);
-        mediaUrl = uploaded.url;
+        fileUrl = uploaded.url;
       }
     }
 
     let type = data.type ?? "TEXT";
     if (mediaFile) {
       type = mediaFile.mimetype.startsWith("audio/") ? "AUDIO" : "IMAGE";
-    } else if (mediaUrl && type === "TEXT") {
+    } else if (fileUrl && type === "TEXT") {
       type = "IMAGE";
     }
 
     const message = await prisma.message.create({
       data: {
-        conversationId: conversation.id,
+        missionId,
         senderId,
         type: type as MessageType,
         content: data.content,
-        mediaUrl,
-        templateId: data.templateId,
-        metadata: data.metadata as Prisma.InputJsonValue | undefined,
+        fileUrl,
       },
       include: {
-        sender: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        sender: { select: senderUserSelect },
       },
-    });
-
-    await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: { updatedAt: new Date() },
     });
 
     const participants = await this.getParticipantIds(missionId);
     const redis = getRedis();
     for (const userId of participants) {
       if (userId !== senderId) {
-        await redis.incr(this.unreadKey(conversation.id, userId));
+        await redis.incr(this.unreadKey(missionId, userId));
       }
     }
 
-    const dto = this.toDto(message, missionId);
+    const sender = mapSenderProfile(message.sender);
+    const dto = this.toDto({ ...message, sender }, missionId);
 
     try {
       getChatNamespace().to(missionRoom(missionId)).emit("chat:message:received", dto);
@@ -173,19 +177,19 @@ export class ChatService {
     return dto;
   }
 
-  async getMessages(missionId: string, userId: string, role: string, query: unknown) {
+  async getMessages(missionOrJobId: string, userId: string, role: string, query: unknown) {
+    const missionId = await this.resolveMissionId(missionOrJobId);
     await this.assertMissionAccess(missionId, userId, role);
     const { cursor, limit } = messagesQuerySchema.parse(query);
-    const conversation = await this.getOrCreateConversation(missionId);
     const cutoff = this.retentionCutoff();
 
     const cursorMessage = cursor
-      ? await prisma.message.findFirst({ where: { id: cursor, conversationId: conversation.id } })
+      ? await prisma.message.findFirst({ where: { id: cursor, missionId } })
       : null;
 
     const messages = await prisma.message.findMany({
       where: {
-        conversationId: conversation.id,
+        missionId,
         deletedAt: null,
         createdAt: {
           gte: cutoff,
@@ -195,7 +199,7 @@ export class ChatService {
       orderBy: { createdAt: "desc" },
       take: limit + 1,
       include: {
-        sender: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        sender: { select: senderUserSelect },
       },
     });
 
@@ -203,10 +207,10 @@ export class ChatService {
     const items = hasMore ? messages.slice(0, limit) : messages;
     const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
-    const unread = await getRedis().get(this.unreadKey(conversation.id, userId));
+    const unread = await getRedis().get(this.unreadKey(missionId, userId));
 
     return {
-      items: items.reverse().map((m) => this.toDto(m, missionId)),
+      items: items.reverse().map((m) => this.toDto({ ...m, sender: mapSenderProfile(m.sender) }, missionId)),
       nextCursor,
       hasMore,
       unreadCount: Number(unread ?? 0),
@@ -216,38 +220,21 @@ export class ChatService {
   async listConversations(userId: string) {
     const cutoff = this.retentionCutoff();
 
-    const jobs = await prisma.job.findMany({
+    const missions = await prisma.mission.findMany({
       where: {
-        OR: [
-          { citizenId: userId },
-          { acceptedOffer: { artisan: { userId } } },
-        ],
-        status: { in: ["ACTIVE", "IN_PROGRESS", "COMPLETED"] },
-        conversation: { isNot: null },
+        OR: [{ citizen: { userId } }, { artisan: { userId } }],
+        job: { status: { in: ["ACTIVE", "IN_PROGRESS", "COMPLETED"] } },
       },
       include: {
-        conversation: {
-          include: {
-            messages: {
-              where: { deletedAt: null, createdAt: { gte: cutoff } },
-              orderBy: { createdAt: "desc" },
-              take: 1,
-              include: {
-                sender: { select: { id: true, firstName: true, lastName: true } },
-              },
-            },
-          },
+        job: { select: { id: true, title: true, status: true, updatedAt: true } },
+        citizen: { select: { id: true, userId: true, firstName: true, lastName: true, avatar: true } },
+        artisan: { select: { id: true, userId: true, firstName: true, lastName: true, avatar: true } },
+        messages: {
+          where: { deletedAt: null, createdAt: { gte: cutoff } },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: { sender: { select: senderUserSelect } },
         },
-        acceptedOffer: {
-          include: {
-            artisan: {
-              include: {
-                user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-              },
-            },
-          },
-        },
-        citizen: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
       },
       orderBy: { updatedAt: "desc" },
       take: 50,
@@ -255,23 +242,30 @@ export class ChatService {
 
     const redis = getRedis();
     const result = await Promise.all(
-      jobs.map(async (job) => {
-        const conv = job.conversation;
-        const lastMessage = conv?.messages[0];
-        const unread = conv
-          ? Number((await redis.get(this.unreadKey(conv.id, userId))) ?? 0)
-          : 0;
+      missions.map(async (mission) => {
+        const lastMessage = mission.messages[0];
+        const unread = Number((await redis.get(this.unreadKey(mission.id, userId))) ?? 0);
 
         const peer =
-          job.citizenId === userId
-            ? job.acceptedOffer?.artisan.user
-            : job.citizen;
+          mission.citizen.userId === userId
+            ? {
+                id: mission.artisan.userId,
+                firstName: mission.artisan.firstName,
+                lastName: mission.artisan.lastName,
+                avatarUrl: mission.artisan.avatar,
+              }
+            : {
+                id: mission.citizen.userId,
+                firstName: mission.citizen.firstName,
+                lastName: mission.citizen.lastName,
+                avatarUrl: mission.citizen.avatar,
+              };
 
         return {
-          missionId: job.id,
-          conversationId: conv?.id,
-          title: job.title,
-          status: job.status,
+          missionId: mission.id,
+          jobId: mission.jobId,
+          title: mission.job.title,
+          status: mission.job.status,
           peer,
           lastMessage: lastMessage
             ? {
@@ -279,11 +273,11 @@ export class ChatService {
                 type: lastMessage.type,
                 content: lastMessage.content,
                 createdAt: lastMessage.createdAt.toISOString(),
-                sender: lastMessage.sender,
+                sender: mapSenderProfile(lastMessage.sender),
               }
             : null,
           unreadCount: unread,
-          updatedAt: conv?.updatedAt.toISOString() ?? job.updatedAt.toISOString(),
+          updatedAt: mission.updatedAt.toISOString(),
         };
       }),
     );
@@ -291,26 +285,26 @@ export class ChatService {
     return result;
   }
 
-  async markRead(missionId: string, userId: string, role: string, messageIds: string[]): Promise<void> {
+  async markRead(
+    missionOrJobId: string,
+    userId: string,
+    role: string,
+    messageIds: string[],
+  ): Promise<void> {
+    const missionId = await this.resolveMissionId(missionOrJobId);
     await this.assertMissionAccess(missionId, userId, role);
-    const conversation = await this.getOrCreateConversation(missionId);
 
-    const messages = await prisma.message.findMany({
+    await prisma.message.updateMany({
       where: {
         id: { in: messageIds },
-        conversationId: conversation.id,
-        deletedAt: null,
+        missionId,
+        senderId: { not: userId },
+        isRead: false,
       },
+      data: { isRead: true },
     });
 
-    if (messages.length === 0) return;
-
-    await prisma.messageRead.createMany({
-      data: messages.map((m) => ({ messageId: m.id, userId })),
-      skipDuplicates: true,
-    });
-
-    await getRedis().set(this.unreadKey(conversation.id, userId), "0");
+    await getRedis().set(this.unreadKey(missionId, userId), "0");
   }
 
   async softDeleteMessage(messageId: string, userId: string): Promise<void> {

@@ -58,7 +58,7 @@ export function registerTrackingGateway(trackingNs: Namespace): void {
           try {
             eta = await trackingService.getEta(
               { lat: position.lat, lng: position.lng },
-              { lat: access.job.locationLat, lng: access.job.locationLng },
+              { lat: access.job.lat, lng: access.job.lng },
             );
           } catch {
             eta = null;

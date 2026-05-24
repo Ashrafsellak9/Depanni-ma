@@ -1,4 +1,5 @@
 import { prisma } from "../../config/db.js";
+import { getRedis } from "../../config/redis.js";
 import { enqueueSms } from "../../jobs/smsQueue.js";
 import { logger } from "../../utils/logger.js";
 import {
@@ -12,32 +13,37 @@ const EXPAND_5_MIN_MS = 5 * 60 * 1000;
 const EXPAND_10_MIN_MS = 10 * 60 * 1000;
 const EXPIRE_MS = 30 * 60 * 1000;
 
+function diffusionRadiusKey(jobId: string): string {
+  return `job:diffusion:radius:${jobId}`;
+}
+
 export interface DiffusionJobPayload {
   jobId: string;
   action: "expand" | "expire";
   targetRadiusKm?: number;
 }
 
-export async function syncJobLocation(jobId: string, lat: number, lng: number): Promise<void> {
-  await prisma.$executeRaw`
-    UPDATE jobs
-    SET
-      "locationLat" = ${lat},
-      "locationLng" = ${lng},
-      location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
-    WHERE id = ${jobId}
-  `;
+export async function getDiffusionRadiusKm(jobId: string): Promise<number> {
+  const raw = await getRedis().get(diffusionRadiusKey(jobId));
+  return raw ? Number(raw) : 2;
+}
+
+export async function setDiffusionRadiusKm(jobId: string, km: number): Promise<void> {
+  await getRedis().setex(diffusionRadiusKey(jobId), 60 * 60, String(km));
 }
 
 export async function broadcastNewJob(jobId: string): Promise<void> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
     include: {
-      citizen: { select: { firstName: true, lastName: true } },
-      category: { select: { id: true, slug: true, nameFr: true } },
+      citizen: {
+        select: { firstName: true, lastName: true, userId: true },
+      },
     },
   });
   if (!job || job.status !== "PENDING") return;
+
+  const radiusKm = await getDiffusionRadiusKm(jobId);
 
   const payload = {
     id: job.id,
@@ -45,31 +51,26 @@ export async function broadcastNewJob(jobId: string): Promise<void> {
     description: job.description,
     urgency: job.urgency,
     city: job.city,
-    categoryId: job.categoryId,
+    category: job.category,
     subcategory: job.subcategory,
-    locationLat: job.locationLat,
-    locationLng: job.locationLng,
+    lat: job.lat,
+    lng: job.lng,
     budgetMin: job.budgetMin,
     budgetMax: job.budgetMax,
-    diffusionRadiusKm: job.diffusionRadiusKm,
+    diffusionRadiusKm: radiusKm,
     photos: job.photos,
     offerCount: job.offerCount,
     expiresAt: job.expiresAt?.toISOString(),
     createdAt: job.createdAt.toISOString(),
-    category: job.category,
   };
 
   await publishJobEvent({
     event: "job:new",
-    rooms: [jobCityRoom(job.city), jobCategoryRoom(job.categoryId)],
+    rooms: [jobCityRoom(job.city), jobCategoryRoom(job.category)],
     data: payload,
   });
 
-  logger.info("Job diffusion broadcast", {
-    jobId,
-    radiusKm: job.diffusionRadiusKm,
-    city: job.city,
-  });
+  logger.info("Job diffusion broadcast", { jobId, radiusKm, city: job.city });
 }
 
 export async function expandDiffusionRadius(
@@ -80,13 +81,11 @@ export async function expandDiffusionRadius(
   if (!job) return;
   if (job.status !== "PENDING" || !job.acceptsOffers) return;
   if (job.offerCount >= 3) return;
-  if (job.diffusionRadiusKm >= targetRadiusKm) return;
 
-  await prisma.job.update({
-    where: { id: jobId },
-    data: { diffusionRadiusKm: targetRadiusKm },
-  });
+  const current = await getDiffusionRadiusKm(jobId);
+  if (current >= targetRadiusKm) return;
 
+  await setDiffusionRadiusKm(jobId, targetRadiusKm);
   await broadcastNewJob(jobId);
   logger.info("Job diffusion radius expanded", { jobId, targetRadiusKm });
 }
@@ -94,7 +93,11 @@ export async function expandDiffusionRadius(
 export async function expireJobIfNeeded(jobId: string): Promise<void> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
-    include: { citizen: { select: { id: true, phone: true, locale: true } } },
+    include: {
+      citizen: {
+        select: { userId: true, user: { select: { phone: true, locale: true } } },
+      },
+    },
   });
   if (!job) return;
   if (job.status !== "PENDING") return;
@@ -106,20 +109,23 @@ export async function expireJobIfNeeded(jobId: string): Promise<void> {
 
   await publishJobEvent({
     event: "job:expired",
-    rooms: [citizenUserRoom(job.citizenId), jobCityRoom(job.city)],
+    rooms: [citizenUserRoom(job.citizen.userId), jobCityRoom(job.city)],
     data: { jobId: job.id, status: "EXPIRED" },
   });
 
+  const locale = job.citizen.user.locale;
   const smsBody =
-    job.citizen.locale === "ar"
+    locale === "ar"
       ? "Depanni: ma tl9a hta 3arif 3la talab dyalek. 3awed jarrab."
       : "Depanni: aucun artisan disponible pour votre demande. Veuillez réessayer.";
 
-  await enqueueSms({ to: job.citizen.phone, body: smsBody });
+  await enqueueSms({ to: job.citizen.user.phone, body: smsBody });
   logger.info("Job expired — citizen notified", { jobId });
 }
 
 export async function scheduleDiffusion(jobId: string): Promise<void> {
+  await setDiffusionRadiusKm(jobId, 2);
+
   const { jobDiffusionQueue } = await import("../../jobs/jobDiffusionQueue.js");
 
   await jobDiffusionQueue.add(

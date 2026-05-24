@@ -1,15 +1,15 @@
-import type { ArtisanSubscriptionTier } from "@prisma/client";
+import type { SubscriptionTier } from "@prisma/client";
 
 import { env } from "../../config/env.js";
 
-const TIER_RATES: Record<ArtisanSubscriptionTier, number> = {
+const TIER_RATES: Record<SubscriptionTier, number> = {
   STANDARD: env.WALLET_COMMISSION_RATE_STANDARD,
   PREMIUM: env.WALLET_COMMISSION_RATE_PREMIUM,
   PRO: env.WALLET_COMMISSION_RATE_PRO,
 };
 
-export function getCommissionRate(tier: ArtisanSubscriptionTier): number {
-  return TIER_RATES[tier];
+export function getCommissionRate(tier: SubscriptionTier): number {
+  return TIER_RATES[tier] ?? TIER_RATES.STANDARD;
 }
 
 export function splitCommission(

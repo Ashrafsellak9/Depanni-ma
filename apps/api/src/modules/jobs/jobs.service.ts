@@ -2,13 +2,13 @@ import { Prisma, type JobStatus } from "@prisma/client";
 
 import { prisma } from "../../config/db.js";
 import { processAndUploadImage } from "../../middleware/upload.js";
+import { getCitizenIdByUserId } from "../../utils/profile.js";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors.js";
 import { offersService } from "../offers/offers.service.js";
 import { paymentsService } from "../payments/payments.service.js";
 import {
   broadcastNewJob,
   scheduleDiffusion,
-  syncJobLocation,
 } from "./jobs.diffusion.js";
 import {
   activeJobsQuerySchema,
@@ -20,17 +20,29 @@ import {
 const CANCELLABLE: JobStatus[] = ["PENDING", "ACTIVE"];
 
 const jobInclude = {
-  citizen: { select: { id: true, firstName: true, lastName: true, phone: true } },
-  category: { select: { id: true, slug: true, nameFr: true } },
+  citizen: {
+    select: {
+      id: true,
+      userId: true,
+      firstName: true,
+      lastName: true,
+      user: { select: { phone: true } },
+    },
+  },
   offers: {
     include: {
       artisan: {
-        include: { user: { select: { firstName: true, lastName: true, avatarUrl: true } } },
+        select: { id: true, firstName: true, lastName: true, avatar: true },
       },
     },
     orderBy: { createdAt: "asc" as const },
   },
-  acceptedOffer: true,
+  mission: {
+    include: {
+      offer: true,
+      artisan: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+    },
+  },
 };
 
 export class JobsService {
@@ -55,45 +67,42 @@ export class JobsService {
     const job = await prisma.job.create({
       data: {
         citizenId,
-        categoryId: data.categoryId,
+        category: category.slug,
         subcategory: data.subcategory,
         title: data.title,
         description: data.description,
         photos: photoUrls,
         urgency: data.urgency,
-        locationLat: data.lat,
-        locationLng: data.lng,
+        lat: data.lat,
+        lng: data.lng,
         address: data.address,
         city: data.city,
-        currency: data.currency,
         budgetMin: data.budgetMin,
         budgetMax: data.budgetMax,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
         status: "PENDING",
-        diffusionRadiusKm: 2,
         expiresAt,
         acceptsOffers: true,
       },
       include: jobInclude,
     });
 
-    await syncJobLocation(job.id, data.lat, data.lng);
     await broadcastNewJob(job.id);
     await scheduleDiffusion(job.id);
 
     return job;
   }
 
-  async getById(id: string, requesterId?: string, requesterRole?: string) {
+  async getById(id: string, requesterUserId?: string, requesterRole?: string) {
     const job = await prisma.job.findUnique({
       where: { id },
       include: jobInclude,
     });
     if (!job) throw new NotFoundError("Demande");
 
-    if (requesterRole === "ARTISAN" && requesterId) {
-      const artisan = await prisma.artisan.findUnique({ where: { userId: requesterId } });
-      if (artisan && job.citizenId !== requesterId) {
+    if (requesterRole === "ARTISAN" && requesterUserId) {
+      const artisan = await prisma.artisan.findUnique({ where: { userId: requesterUserId } });
+      if (artisan && requesterUserId !== job.citizen.userId) {
         return {
           ...job,
           offers: job.offers.filter((o) => o.artisanId === artisan.id),
@@ -120,13 +129,10 @@ export class JobsService {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          category: { select: { slug: true, nameFr: true } },
           _count: { select: { offers: true } },
-          acceptedOffer: {
+          mission: {
             include: {
-              artisan: {
-                include: { user: { select: { firstName: true, lastName: true } } },
-              },
+              artisan: { select: { id: true, firstName: true, lastName: true } },
             },
           },
         },
@@ -151,7 +157,7 @@ export class JobsService {
     const cancelled = await prisma.$transaction(async (tx) => {
       await tx.offer.updateMany({
         where: { jobId, status: "PENDING" },
-        data: { status: "CANCELLED" },
+        data: { status: "WITHDRAWN" },
       });
       return tx.job.update({
         where: { id: jobId },
@@ -169,14 +175,13 @@ export class JobsService {
 
     const artisan = await prisma.artisan.findUnique({
       where: { userId: artisanUserId },
-      include: { categories: true },
     });
     if (!artisan) throw new ForbiddenError("Profil artisan requis");
-
-    const categoryIds = artisan.categories.map((c) => c.categoryId);
-    if (categoryIds.length === 0) {
+    if (artisan.specialties.length === 0) {
       return [];
     }
+
+    const radiusKm = 10;
 
     const rows = await prisma.$queryRaw<
       Array<{
@@ -184,12 +189,11 @@ export class JobsService {
         title: string;
         urgency: string;
         city: string;
-        categoryId: string;
-        locationLat: number;
-        locationLng: number;
+        category: string;
+        lat: number;
+        lng: number;
         budgetMin: number | null;
         budgetMax: number | null;
-        diffusionRadiusKm: number;
         offerCount: number;
         distanceMeters: number;
         createdAt: Date;
@@ -200,24 +204,25 @@ export class JobsService {
         j.title,
         j.urgency,
         j.city,
-        j."categoryId",
-        j."locationLat",
-        j."locationLng",
+        j.category,
+        j.lat,
+        j.lng,
         j."budgetMin",
         j."budgetMax",
-        j."diffusionRadiusKm",
         j."offerCount",
-        ST_Distance(j.location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography) AS "distanceMeters",
+        ST_Distance(
+          ST_SetSRID(ST_MakePoint(j.lng, j.lat), 4326)::geography,
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+        ) AS "distanceMeters",
         j."createdAt"
       FROM jobs j
       WHERE j.status = 'PENDING'::"JobStatus"
         AND j."acceptsOffers" = true
-        AND j.location IS NOT NULL
-        AND j."categoryId" IN (${Prisma.join(categoryIds)})
+        AND j.category = ANY(${artisan.specialties}::text[])
         AND ST_DWithin(
-          j.location,
+          ST_SetSRID(ST_MakePoint(j.lng, j.lat), 4326)::geography,
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
-          j."diffusionRadiusKm" * 1000
+          ${radiusKm * 1000}
         )
       ORDER BY j."createdAt" DESC
       LIMIT ${limit}
@@ -229,7 +234,6 @@ export class JobsService {
     }));
   }
 
-  // Délégation offres
   createOffer = (
     jobId: string,
     userId: string,
@@ -248,6 +252,9 @@ export class JobsService {
 
   completeOffer = (jobId: string, offerId: string, userId: string, role: string) =>
     offersService.complete(jobId, offerId, userId, role);
+
+  /** Résout citizenId pour un userId citoyen (utilitaire controllers). */
+  resolveCitizenId = (userId: string) => getCitizenIdByUserId(userId);
 }
 
 export const jobsService = new JobsService();

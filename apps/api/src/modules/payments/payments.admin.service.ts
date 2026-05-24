@@ -13,11 +13,10 @@ export class PaymentsAdminService {
 
     const artisan = await prisma.artisan.findUnique({
       where: { id: data.artisanId },
-      include: { user: true },
     });
     if (!artisan) throw new NotFoundError("Artisan");
 
-    const wallet = await walletService.getOrCreateWallet(artisan.userId);
+    const wallet = await walletService.getOrCreateWallet(artisan.id);
     const amount = data.amount ?? wallet.balance;
 
     if (amount <= 0) {
@@ -30,6 +29,7 @@ export class PaymentsAdminService {
     const batchId = randomUUID();
 
     const payout = await prisma.$transaction(async (tx) => {
+      const balanceBefore = wallet.balance;
       const updatedWallet = await tx.wallet.update({
         where: { id: wallet.id },
         data: { balance: { decrement: amount } },
@@ -37,11 +37,13 @@ export class PaymentsAdminService {
 
       await tx.walletTransaction.create({
         data: {
-          walletId: wallet.id,
+          artisanId: artisan.id,
           type: "PAYOUT",
           amount: -amount,
+          balanceBefore,
           balanceAfter: updatedWallet.balance,
           reference: data.reference ?? batchId,
+          description: "Virement admin",
         },
       });
 
@@ -53,7 +55,6 @@ export class PaymentsAdminService {
           reference: data.reference,
           batchId,
           initiatedBy: adminId,
-          metadata: { triggeredAt: new Date().toISOString() },
         },
       });
     });
@@ -97,9 +98,7 @@ export class PaymentsAdminService {
         orderBy: { createdAt: "desc" },
         include: {
           artisan: {
-            include: {
-              user: { select: { firstName: true, lastName: true, email: true } },
-            },
+            select: { id: true, firstName: true, lastName: true, userId: true },
           },
         },
       }),
@@ -117,8 +116,12 @@ export class PaymentsAdminService {
     return escrowService.initiateRefund(paymentId, adminId, reason);
   }
 
-  async executeRefund(refundId: string, adminId: string) {
-    return escrowService.executeRefund(refundId, adminId);
+  async executeRefund(paymentId: string, adminId: string, body: unknown) {
+    const reason =
+      typeof body === "object" && body !== null && "reason" in body
+        ? String((body as { reason?: string }).reason ?? "")
+        : undefined;
+    return escrowService.executeRefund(paymentId, adminId, reason);
   }
 }
 

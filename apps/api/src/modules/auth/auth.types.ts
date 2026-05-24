@@ -7,9 +7,8 @@ export interface AuthUserView {
   role: UserRole;
   firstName: string;
   lastName: string;
-  status: string;
-  phoneVerified: boolean;
-  emailVerified: boolean;
+  isVerified: boolean;
+  citizenId?: string;
   artisanId?: string;
 }
 
@@ -24,6 +23,5 @@ export interface AuthSessionResponse {
   user: AuthUserView;
   accessToken: string;
   expiresIn: number;
-  /** Présent côté serveur pour cookie httpOnly — non exposé au client dans le JSON login */
   refreshToken?: string;
 }

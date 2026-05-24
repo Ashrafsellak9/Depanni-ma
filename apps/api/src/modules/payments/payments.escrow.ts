@@ -20,7 +20,6 @@ export class EscrowService {
       data: {
         status: "ESCROW",
         artisanId,
-        escrowAt: new Date(),
       },
     });
 
@@ -32,13 +31,13 @@ export class EscrowService {
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
-        job: true,
-        artisan: { include: { user: true } },
+        mission: { include: { job: true } },
+        artisan: true,
       },
     });
     if (!payment) throw new NotFoundError("Paiement");
     if (payment.citizenId !== citizenId) throw new ForbiddenError();
-    if (payment.job.status !== "COMPLETED") {
+    if (payment.mission.job.status !== "COMPLETED") {
       throw new ConflictError("La mission doit être terminée avant libération des fonds");
     }
     if (payment.status !== "ESCROW") {
@@ -64,32 +63,13 @@ export class EscrowService {
         },
       });
 
-      await tx.artisan.update({
-        where: { id: payment.artisanId! },
-        data: { totalEarnings: { increment: artisanNet } },
-      });
-
-      await tx.artisanEarning.create({
-        data: {
-          artisanId: payment.artisanId!,
-          jobId: payment.jobId,
-          grossAmount: payment.amount,
-          commission: depanniRevenue,
-          netAmount: artisanNet,
-          status: "PAID",
-          paidAt: new Date(),
-        },
-      });
-
       return p;
     });
 
-    await walletService.credit(
-      payment.artisan.userId,
-      artisanNet,
-      "ESCROW_RELEASE",
-      { paymentId, metadata: { jobId: payment.jobId, commission: depanniRevenue } },
-    );
+    await walletService.credit(payment.artisanId, artisanNet, "CREDIT", {
+      reference: paymentId,
+      description: `Mission ${payment.missionId} — net artisan`,
+    });
 
     await logPaymentAudit(paymentId, "ESCROW_RELEASED", citizenId, {
       artisanNet,
@@ -109,32 +89,14 @@ export class EscrowService {
       throw new ConflictError("Remboursement impossible pour ce statut");
     }
 
-    const refund = await prisma.refund.create({
-      data: {
-        paymentId,
-        amount: payment.amount,
-        status: "EXECUTED",
-        reason,
-        initiatedBy: actorId,
-        executedAt: new Date(),
-      },
-    });
-
     const updated = await prisma.payment.update({
       where: { id: paymentId },
       data: { status: "REFUNDED", refundedAt: new Date() },
     });
 
-    if (payment.method === "WALLET") {
-      await walletService.credit(payment.citizenId, payment.amount, "REFUND", {
-        paymentId,
-        reference: refund.id,
-      });
-    }
-
     await logPaymentAudit(paymentId, "REFUND_EXECUTED", actorId, {
       amount: payment.amount,
-      refundId: refund.id,
+      reason,
     });
 
     return updated;
@@ -144,58 +106,25 @@ export class EscrowService {
     const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
     if (!payment) throw new NotFoundError("Paiement");
 
-    const resolveBy = new Date();
-    resolveBy.setHours(resolveBy.getHours() + env.DISPUTE_FREEZE_HOURS);
-
     const updated = await prisma.payment.update({
       where: { id: paymentId },
-      data: {
-        status: "FROZEN",
-        disputeOpenedAt: new Date(),
-        disputeResolveBy: resolveBy,
-      },
+      data: { status: "FROZEN" },
     });
 
-    await logPaymentAudit(paymentId, "DISPUTE_OPENED", adminId, { reason, resolveBy });
+    await logPaymentAudit(paymentId, "DISPUTE_OPENED", adminId, {
+      reason,
+      freezeHours: env.DISPUTE_FREEZE_HOURS,
+    });
     return updated;
   }
 
-  /** Remboursement admin — étape 1 : initiation */
   async initiateRefund(paymentId: string, adminId: string, reason?: string) {
-    const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
-    if (!payment) throw new NotFoundError("Paiement");
-
-    const refund = await prisma.refund.create({
-      data: {
-        paymentId,
-        amount: payment.amount,
-        status: "INITIATED",
-        reason,
-        initiatedBy: adminId,
-      },
-    });
-
-    await logPaymentAudit(paymentId, "REFUND_INITIATED", adminId, { refundId: refund.id });
-    return refund;
+    await logPaymentAudit(paymentId, "REFUND_INITIATED", adminId, { reason });
+    return { paymentId, status: "INITIATED", reason };
   }
 
-  /** Remboursement admin — étape 2 : exécution batch */
-  async executeRefund(refundId: string, adminId: string) {
-    const refund = await prisma.refund.findUnique({
-      where: { id: refundId },
-      include: { payment: true },
-    });
-    if (!refund) throw new NotFoundError("Remboursement");
-    if (refund.status !== "INITIATED") {
-      throw new ConflictError("Remboursement déjà traité");
-    }
-
-    await this.refundFull(refund.paymentId, adminId, refund.reason ?? undefined);
-
-    return prisma.refund.update({
-      where: { id: refundId },
-      data: { status: "EXECUTED", executedAt: new Date() },
-    });
+  async executeRefund(paymentId: string, adminId: string, reason?: string) {
+    return this.refundFull(paymentId, adminId, reason);
   }
 }
 

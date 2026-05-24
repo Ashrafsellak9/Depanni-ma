@@ -1,4 +1,4 @@
-import type { Artisan, Prisma } from "@prisma/client";
+import type { AvailabilityStatus } from "@prisma/client";
 
 import { extractS3Key, getSignedPrivateUrl } from "../../config/s3.js";
 import { prisma } from "../../config/db.js";
@@ -6,6 +6,7 @@ import { uploadPrivateFile } from "../../middleware/upload.js";
 import { ForbiddenError, NotFoundError } from "../../utils/errors.js";
 import { findNearbyArtisans, syncArtisanGeo, syncBaseLocationGeo } from "./artisans.geo.js";
 import { refreshArtisanMetrics } from "./artisans.score.js";
+import { walletService } from "../payments/payments.wallet.js";
 import {
   availabilitySchema,
   locationSchema,
@@ -15,30 +16,8 @@ import {
   type UpdateArtisanMeInput,
 } from "./artisans.schemas.js";
 
-const COMMISSION_RATE = 0.1;
-
-const artisanMeInclude = {
-  user: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      phone: true,
-      avatarUrl: true,
-      locale: true,
-    },
-  },
-  categories: { include: { category: true } },
-  reviews: {
-    take: 5,
-    orderBy: { createdAt: "desc" as const },
-    select: { id: true, rating: true, comment: true, createdAt: true },
-  },
-} satisfies Prisma.ArtisanInclude;
-
 export class ArtisansService {
-  async getArtisanByUserId(userId: string): Promise<Artisan> {
+  async getArtisanByUserId(userId: string) {
     const artisan = await prisma.artisan.findUnique({ where: { userId } });
     if (!artisan) throw new NotFoundError("Profil artisan");
     return artisan;
@@ -47,29 +26,29 @@ export class ArtisansService {
   async getMe(userId: string) {
     const artisan = await prisma.artisan.findUnique({
       where: { userId },
-      include: artisanMeInclude,
+      include: {
+        user: { select: { id: true, email: true, phone: true, locale: true } },
+      },
     });
     if (!artisan) throw new NotFoundError("Profil artisan");
 
-    const [pendingOffers, earningsSum] = await Promise.all([
+    const [pendingOffers, wallet] = await Promise.all([
       prisma.offer.count({ where: { artisanId: artisan.id, status: "PENDING" } }),
-      prisma.artisanEarning.aggregate({
-        where: { artisanId: artisan.id, status: "PAID" },
-        _sum: { netAmount: true },
-      }),
+      walletService.getBalance(artisan.id).catch(() => null),
     ]);
 
-    const kycDocuments = await this.buildKycSignedUrls(artisan);
+    const kycDocuments = await this.buildKycSignedUrls(artisan.kycDocUrls);
 
     return {
       ...artisan,
       kycDocuments,
+      wallet,
       stats: {
         pendingOffers,
-        totalPaidEarnings: earningsSum._sum.netAmount ?? 0,
-        artisanScore: artisan.artisanScore,
-        isTopArtisan: artisan.isTopArtisan,
-        isVerified: artisan.isVerified,
+        totalMissions: artisan.totalMissions,
+        rating: artisan.rating,
+        badgeVerified: artisan.badgeVerified,
+        badgeTop: artisan.badgeTop,
       },
     };
   }
@@ -80,21 +59,21 @@ export class ArtisansService {
 
     const { categoryIds, baseLocation, ...profileData } = data;
 
-    await prisma.$transaction(async (tx) => {
-      await tx.artisan.update({
-        where: { id: artisan.id },
-        data: profileData,
+    let specialties = profileData.specialties;
+    if (categoryIds?.length) {
+      const categories = await prisma.serviceCategory.findMany({
+        where: { id: { in: categoryIds } },
+        select: { slug: true },
       });
+      specialties = categories.map((c) => c.slug);
+    }
 
-      if (categoryIds?.length) {
-        await tx.artisanCategory.deleteMany({ where: { artisanId: artisan.id } });
-        await tx.artisanCategory.createMany({
-          data: categoryIds.map((categoryId) => ({
-            artisanId: artisan.id,
-            categoryId,
-          })),
-        });
-      }
+    await prisma.artisan.update({
+      where: { id: artisan.id },
+      data: {
+        ...profileData,
+        ...(specialties != null ? { specialties } : {}),
+      },
     });
 
     if (baseLocation) {
@@ -102,7 +81,6 @@ export class ArtisansService {
     }
 
     await refreshArtisanMetrics(artisan.id);
-
     return this.getMe(userId);
   }
 
@@ -110,14 +88,16 @@ export class ArtisansService {
     const { isAvailable } = availabilitySchema.parse(input);
     const artisan = await this.getArtisanByUserId(userId);
 
-    if (isAvailable && artisan.verificationStatus !== "APPROVED") {
+    if (isAvailable && artisan.kycStatus !== "APPROVED") {
       throw new ForbiddenError("KYC non validé — disponibilité impossible");
     }
 
+    const availabilityStatus: AvailabilityStatus = isAvailable ? "ONLINE" : "OFFLINE";
+
     return prisma.artisan.update({
       where: { id: artisan.id },
-      data: { isAvailable },
-      select: { id: true, isAvailable: true, verificationStatus: true },
+      data: { availabilityStatus },
+      select: { id: true, availabilityStatus: true, kycStatus: true },
     });
   }
 
@@ -131,9 +111,9 @@ export class ArtisansService {
       where: { id: artisan.id },
       select: {
         id: true,
-        currentLat: true,
-        currentLng: true,
-        isAvailable: true,
+        lat: true,
+        lng: true,
+        availabilityStatus: true,
         updatedAt: true,
       },
     });
@@ -142,8 +122,8 @@ export class ArtisansService {
   async getEarnings(userId: string) {
     const artisan = await this.getArtisanByUserId(userId);
 
-    const [earnings, payouts, summary] = await Promise.all([
-      prisma.artisanEarning.findMany({
+    const [transactions, payouts, wallet] = await Promise.all([
+      prisma.walletTransaction.findMany({
         where: { artisanId: artisan.id },
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -153,21 +133,21 @@ export class ArtisansService {
         orderBy: { createdAt: "desc" },
         take: 20,
       }),
-      prisma.artisanEarning.aggregate({
-        where: { artisanId: artisan.id },
-        _sum: { grossAmount: true, commission: true, netAmount: true },
-      }),
+      walletService.getBalance(artisan.id),
     ]);
 
+    const credits = transactions
+      .filter((t) => t.amount > 0)
+      .reduce((s, t) => s + t.amount, 0);
+
     return {
-      commissionRate: COMMISSION_RATE,
+      wallet,
       summary: {
-        grossTotal: summary._sum.grossAmount ?? 0,
-        commissionTotal: summary._sum.commission ?? 0,
-        netTotal: summary._sum.netAmount ?? 0,
-        totalEarnings: artisan.totalEarnings,
+        balance: wallet.balance,
+        totalCredited: credits,
+        totalMissions: artisan.totalMissions,
       },
-      earnings,
+      transactions,
       payouts,
     };
   }
@@ -176,61 +156,71 @@ export class ArtisansService {
     const artisan = await prisma.artisan.findUnique({
       where: { id: artisanId },
       include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-          },
-        },
-        categories: { include: { category: true } },
-        reviews: {
-          orderBy: { createdAt: "desc" },
-          take: 20,
-          select: {
-            id: true,
-            rating: true,
-            comment: true,
-            createdAt: true,
-            citizen: {
-              select: { firstName: true, lastName: true, avatarUrl: true },
-            },
-          },
-        },
+        user: { select: { id: true } },
       },
     });
     if (!artisan) throw new NotFoundError("Artisan");
 
-    const completedJobs = await prisma.offer.count({
-      where: { artisanId, status: "ACCEPTED" },
+    const reviews = await prisma.review.findMany({
+      where: { targetId: artisanId, targetType: "ARTISAN" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        criteria: true,
+        createdAt: true,
+        author: {
+          select: {
+            id: true,
+            citizen: { select: { firstName: true, lastName: true, avatar: true } },
+          },
+        },
+      },
     });
 
     return {
       id: artisan.id,
+      firstName: artisan.firstName,
+      lastName: artisan.lastName,
+      avatarUrl: artisan.avatar,
       bio: artisan.bio,
       specialties: artisan.specialties,
       zones: artisan.zones,
       hourlyRate: artisan.hourlyRate,
       rating: artisan.rating,
-      artisanScore: artisan.artisanScore,
-      completedJobs: artisan.completedJobs,
-      isVerified: artisan.isVerified,
-      isTopArtisan: artisan.isTopArtisan,
+      totalMissions: artisan.totalMissions,
+      badgeVerified: artisan.badgeVerified,
+      badgeTop: artisan.badgeTop,
       badges: this.buildBadges(artisan),
-      categories: artisan.categories.map((c) => c.category),
-      reviews: artisan.reviews,
-      user: artisan.user,
-      realizationsCount: completedJobs,
+      reviews: reviews.map((r) => ({
+        ...r,
+        authorName: r.author.citizen
+          ? `${r.author.citizen.firstName} ${r.author.citizen.lastName}`
+          : "Citoyen",
+      })),
+      realizationsCount: artisan.totalMissions,
     };
   }
 
   async findNearby(query: unknown) {
     const params: NearbyQueryInput = nearbyQuerySchema.parse(query);
+
+    let categorySlug: string | undefined;
+    if (params.category) {
+      const cat = await prisma.serviceCategory.findUnique({
+        where: { id: params.category },
+        select: { slug: true },
+      });
+      categorySlug = cat?.slug;
+    }
+
     const artisans = await findNearbyArtisans({
       lat: params.lat,
       lng: params.lng,
       radiusKm: params.radius,
-      categoryId: params.category,
+      categorySlug,
       limit: params.limit,
     });
 
@@ -249,90 +239,61 @@ export class ArtisansService {
     },
   ) {
     const artisan = await this.getArtisanByUserId(userId);
-    const updates: Prisma.ArtisanUpdateInput = {
-      verificationStatus: "PENDING",
-    };
+    const newUrls: string[] = [...artisan.kycDocUrls];
 
     const cinRecto = files.cinRecto?.[0];
     const cinVerso = files.cinVerso?.[0];
     const diploma = files.diploma?.[0];
 
     if (cinRecto) {
-      const ext = cinRecto.mimetype === "application/pdf" ? "pdf" : "jpg";
-      const uploaded = await uploadPrivateFile(
-        cinRecto.buffer,
-        `kyc/${artisan.id}/cin-recto`,
-        cinRecto.mimetype,
-        ext,
-      );
-      updates.cinRectoUrl = uploaded.key;
-      updates.cinDocumentUrl = uploaded.key;
+      newUrls.push(await this.uploadKycFile(cinRecto, `kyc/${artisan.id}/cin-recto`));
     }
-
     if (cinVerso) {
-      const ext = cinVerso.mimetype === "application/pdf" ? "pdf" : "jpg";
-      const uploaded = await uploadPrivateFile(
-        cinVerso.buffer,
-        `kyc/${artisan.id}/cin-verso`,
-        cinVerso.mimetype,
-        ext,
-      );
-      updates.cinVersoUrl = uploaded.key;
+      newUrls.push(await this.uploadKycFile(cinVerso, `kyc/${artisan.id}/cin-verso`));
     }
-
     if (diploma) {
-      const ext = diploma.mimetype === "application/pdf" ? "pdf" : "jpg";
-      const uploaded = await uploadPrivateFile(
-        diploma.buffer,
-        `kyc/${artisan.id}/diploma`,
-        diploma.mimetype,
-        ext,
-      );
-      updates.diplomaUrl = uploaded.key;
-      updates.tradeLicenseUrl = uploaded.key;
+      newUrls.push(await this.uploadKycFile(diploma, `kyc/${artisan.id}/diploma`));
     }
 
     const updated = await prisma.artisan.update({
       where: { id: artisan.id },
-      data: updates,
+      data: {
+        kycStatus: "PENDING",
+        kycDocUrls: newUrls,
+      },
     });
 
-    const kycDocuments = await this.buildKycSignedUrls(updated);
-    return { artisanId: updated.id, verificationStatus: updated.verificationStatus, kycDocuments };
+    const kycDocuments = await this.buildKycSignedUrls(updated.kycDocUrls);
+    return { artisanId: updated.id, kycStatus: updated.kycStatus, kycDocuments };
+  }
+
+  private async uploadKycFile(file: Express.Multer.File, folder: string): Promise<string> {
+    const ext = file.mimetype === "application/pdf" ? "pdf" : "jpg";
+    const uploaded = await uploadPrivateFile(file.buffer, folder, file.mimetype, ext);
+    return uploaded.url;
   }
 
   private buildBadges(artisan: {
-    isVerified: boolean;
-    isTopArtisan: boolean;
+    badgeVerified: boolean;
+    badgeTop: boolean;
     rating: number;
   }): string[] {
     const badges: string[] = [];
-    if (artisan.isVerified) badges.push("VERIFIED");
-    if (artisan.isTopArtisan) badges.push("TOP_ARTISAN");
+    if (artisan.badgeVerified) badges.push("VERIFIED");
+    if (artisan.badgeTop) badges.push("TOP_ARTISAN");
     if (artisan.rating >= 4.5) badges.push("HIGHLY_RATED");
     return badges;
   }
 
-  private async buildKycSignedUrls(artisan: {
-    cinDocumentUrl: string | null;
-    cinRectoUrl: string | null;
-    cinVersoUrl: string | null;
-    tradeLicenseUrl: string | null;
-    diplomaUrl: string | null;
-  }) {
-    const entries: { field: string; url: string | null }[] = [
-      { field: "cinRecto", url: artisan.cinRectoUrl ?? artisan.cinDocumentUrl },
-      { field: "cinVerso", url: artisan.cinVersoUrl },
-      { field: "diploma", url: artisan.diplomaUrl ?? artisan.tradeLicenseUrl },
-    ];
-
+  private async buildKycSignedUrls(urls: string[]) {
     const result: Record<string, string> = {};
-    for (const { field, url } of entries) {
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
       if (!url) continue;
       try {
-        result[field] = await getSignedPrivateUrl(extractS3Key(url));
+        result[`doc_${i + 1}`] = await getSignedPrivateUrl(extractS3Key(url));
       } catch {
-        result[field] = url;
+        result[`doc_${i + 1}`] = url;
       }
     }
     return result;

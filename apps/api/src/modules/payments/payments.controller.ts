@@ -44,14 +44,24 @@ export class PaymentsController {
   };
 
   walletBalance = async (req: Request, res: Response): Promise<void> => {
-    const balance = await walletService.getBalance(req.user!.id);
+    const artisanId = req.user!.artisanId;
+    if (!artisanId) {
+      res.status(403).json({ error: "Profil artisan requis" });
+      return;
+    }
+    const balance = await walletService.getBalance(artisanId);
     sendSuccess(res, balance);
   };
 
   walletTransactions = async (req: Request, res: Response): Promise<void> => {
+    const artisanId = req.user!.artisanId;
+    if (!artisanId) {
+      res.status(403).json({ error: "Profil artisan requis" });
+      return;
+    }
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 30);
-    const data = await walletService.listTransactions(req.user!.id, page, limit);
+    const data = await walletService.listTransactions(artisanId, page, limit);
     sendSuccess(res, data);
   };
 
@@ -82,11 +92,12 @@ export class PaymentsController {
   };
 
   adminExecuteRefund = async (req: Request, res: Response): Promise<void> => {
-    const refund = await paymentsAdminService.executeRefund(
-      getParam(req, "refundId"),
+    const result = await paymentsAdminService.executeRefund(
+      getParam(req, "paymentId"),
       req.user!.id,
+      req.body,
     );
-    sendSuccess(res, refund);
+    sendSuccess(res, result);
   };
 }
 

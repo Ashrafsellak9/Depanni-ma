@@ -11,7 +11,7 @@ export class AdminService {
       prisma.artisan.count(),
       prisma.job.count(),
       prisma.offer.count(),
-      prisma.artisan.count({ where: { verificationStatus: "PENDING" } }),
+      prisma.artisan.count({ where: { kycStatus: "PENDING" } }),
     ]);
     return { users, artisans, jobs, offers, kycPending };
   }
@@ -27,7 +27,7 @@ export class AdminService {
         email: true,
         phone: true,
         role: true,
-        status: true,
+        isVerified: true,
         createdAt: true,
       },
     });
@@ -37,29 +37,21 @@ export class AdminService {
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([
       prisma.artisan.findMany({
-        where: { verificationStatus: "PENDING" },
+        where: { kycStatus: "PENDING" },
         skip,
         take: limit,
         orderBy: { updatedAt: "desc" },
         include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-            },
-          },
+          user: { select: { id: true, email: true, phone: true } },
         },
       }),
-      prisma.artisan.count({ where: { verificationStatus: "PENDING" } }),
+      prisma.artisan.count({ where: { kycStatus: "PENDING" } }),
     ]);
 
     const withSignedDocs = await Promise.all(
       items.map(async (artisan) => ({
         ...artisan,
-        kycDocuments: await this.signedKycUrls(artisan),
+        kycDocuments: await this.signedKycUrls(artisan.kycDocUrls),
       })),
     );
 
@@ -73,9 +65,8 @@ export class AdminService {
     const updated = await prisma.artisan.update({
       where: { id: artisanId },
       data: {
-        verificationStatus: "APPROVED",
-        isVerified: true,
-        rejectionReason: null,
+        kycStatus: "APPROVED",
+        badgeVerified: true,
       },
     });
 
@@ -91,34 +82,23 @@ export class AdminService {
     return prisma.artisan.update({
       where: { id: artisanId },
       data: {
-        verificationStatus: "REJECTED",
-        isVerified: false,
-        isAvailable: false,
-        rejectionReason: reason,
+        kycStatus: "REJECTED",
+        badgeVerified: false,
+        availabilityStatus: "OFFLINE",
+        bio: reason ? `${artisan.bio ?? ""}\n[KYC refusé: ${reason}]`.trim() : artisan.bio,
       },
     });
   }
 
-  private async signedKycUrls(artisan: {
-    cinDocumentUrl: string | null;
-    cinRectoUrl: string | null;
-    cinVersoUrl: string | null;
-    diplomaUrl: string | null;
-    tradeLicenseUrl: string | null;
-  }) {
+  private async signedKycUrls(urls: string[]) {
     const docs: Record<string, string> = {};
-    const map = {
-      cinRecto: artisan.cinRectoUrl ?? artisan.cinDocumentUrl,
-      cinVerso: artisan.cinVersoUrl,
-      diploma: artisan.diplomaUrl ?? artisan.tradeLicenseUrl,
-    };
-
-    for (const [key, value] of Object.entries(map)) {
+    for (let i = 0; i < urls.length; i++) {
+      const value = urls[i];
       if (!value) continue;
       try {
-        docs[key] = await getSignedPrivateUrl(extractS3Key(value));
+        docs[`doc_${i + 1}`] = await getSignedPrivateUrl(extractS3Key(value));
       } catch {
-        docs[key] = value;
+        docs[`doc_${i + 1}`] = value;
       }
     }
     return docs;
