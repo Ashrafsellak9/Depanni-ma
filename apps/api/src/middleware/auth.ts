@@ -14,7 +14,12 @@ export const authenticate = asyncHandler(
     }
 
     const token = header.slice(7);
-    const decoded = verifyAccessToken(token);
+    let decoded;
+    try {
+      decoded = verifyAccessToken(token);
+    } catch {
+      throw new UnauthorizedError("Token invalide ou expiré");
+    }
 
     req.user = {
       id: decoded.userId,

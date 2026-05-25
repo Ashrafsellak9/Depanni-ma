@@ -17,12 +17,13 @@ authRoutes.post(
 authRoutes.post(
   "/register/artisan",
   otpSendLimiter,
-  artisanKycFields,
+  ...artisanKycFields,
   handleMulterError,
   asyncHandler(authController.registerArtisan),
 );
 
 authRoutes.post("/resend-otp", otpSendLimiter, asyncHandler(authController.resendOtp));
+authRoutes.post("/send-otp", otpSendLimiter, asyncHandler(authController.resendOtp));
 
 authRoutes.post("/verify-otp", loginLimiter, asyncHandler(authController.verifyOtp));
 

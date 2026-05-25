@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 import { disconnectDb } from "./config/db.js";
 import { env } from "./config/env.js";
+import { assertJwtKeyPairAtStartup } from "./config/jwt.js";
 import { disconnectRedis } from "./config/redis.js";
 import { closeJobDiffusionQueue, startJobDiffusionWorker } from "./jobs/jobDiffusionQueue.js";
 import { startMonthlyReportScheduler } from "./jobs/monthlyReport.cron.js";
@@ -17,6 +18,7 @@ const httpServer = createServer(app);
 let isShuttingDown = false;
 
 async function bootstrap(): Promise<void> {
+  assertJwtKeyPairAtStartup();
   startJobDiffusionWorker();
   startPayoutWorker();
   startMonthlyReportScheduler();

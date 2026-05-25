@@ -7,6 +7,8 @@ import type {
 } from "express";
 import multer, { type FileFilterCallback } from "multer";
 
+import { MAX_UPLOAD_BYTES } from "../../lib/fileValidation.js";
+import { validateUploadMagic } from "../../middleware/validateUpload.js";
 import { env } from "../../config/env.js";
 
 const KYC_MIME = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
@@ -50,8 +52,6 @@ export function getRefreshTokenFromRequest(req: Request): string | undefined {
   return undefined;
 }
 
-const kycStorage = multer.memoryStorage();
-
 function kycFileFilter(
   _req: Request,
   file: Express.Multer.File,
@@ -64,16 +64,21 @@ function kycFileFilter(
   cb(new Error("Type de fichier KYC non supporté (JPEG, PNG, WebP, PDF)"));
 }
 
-export const kycUpload = multer({
-  storage: kycStorage,
-  limits: { fileSize: 10 * 1024 * 1024, files: 2 },
+const kycUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 2 },
   fileFilter: kycFileFilter,
 });
 
-export const artisanKycFields: RequestHandler = kycUpload.fields([
+const kycFields = kycUpload.fields([
   { name: "cinDocument", maxCount: 1 },
   { name: "tradeLicense", maxCount: 1 },
 ]);
+
+export const artisanKycFields: RequestHandler[] = [
+  kycFields,
+  validateUploadMagic("kyc"),
+];
 
 export function handleMulterError(
   err: unknown,

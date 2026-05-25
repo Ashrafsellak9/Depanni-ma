@@ -2,6 +2,9 @@ import type { RequestHandler } from "express";
 import multer, { type FileFilterCallback } from "multer";
 import type { Request } from "express";
 
+import { MAX_UPLOAD_BYTES } from "../../lib/fileValidation.js";
+import { validateUploadMagic } from "../../middleware/validateUpload.js";
+
 const PHOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
 function photoFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback): void {
@@ -14,8 +17,13 @@ function photoFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCal
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 5 },
   fileFilter: photoFilter,
 });
 
-export const jobPhotosUpload: RequestHandler = upload.array("photos", 5);
+const multerPhotos = upload.array("photos", 5);
+
+export const jobPhotosUpload: RequestHandler[] = [
+  multerPhotos,
+  validateUploadMagic("image"),
+];

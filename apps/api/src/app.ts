@@ -2,12 +2,17 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
-import helmet from "helmet";
 
-import { corsOrigins, env } from "./config/env.js";
+import { corsOrigins } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { httpLogger } from "./middleware/logger.js";
 import { globalLimiter } from "./middleware/rateLimiter.js";
+import {
+  applyHelmet,
+  forceHttps,
+  httpParameterPollution,
+  sanitizeInput,
+} from "./middleware/security.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { artisansRoutes } from "./modules/artisans/artisans.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
@@ -32,20 +37,25 @@ export function createApp(): Express {
   app.use("/api/payments", paymentsCmiRouter);
   app.use("/api/v1/payments", paymentsCmiRouter);
 
-  app.use(helmet());
+  applyHelmet(app);
+  app.use(forceHttps);
   app.use(
     cors({
       origin: corsOrigins,
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
     }),
   );
+  app.use(httpParameterPollution);
   app.use(compression());
   app.use(cookieParser());
   app.use(httpLogger);
   app.use(globalLimiter);
 
   app.use(express.json({ limit: "10mb" }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+  app.use(sanitizeInput);
 
   app.use("/api/auth", authRoutes);
   app.use("/api/v1/auth", authRoutes);

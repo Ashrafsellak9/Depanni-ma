@@ -1,17 +1,28 @@
 import { Router, type IRouter } from "express";
 
 import { authenticate, authorize } from "../../middleware/auth.js";
+import { nearbyLimiter } from "../../middleware/rateLimiter.js";
+import { validateParams, validateQuery } from "../../middleware/validate.js";
+import { uuidParamSchema } from "../../schemas/common.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { artisansController } from "./artisans.controller.js";
+import { nearbyQuerySchema } from "./artisans.schemas.js";
 import { artisanKycUpload } from "./artisans.middleware.js";
 
 export const artisansRoutes: IRouter = Router();
 
-// Public
-artisansRoutes.get("/nearby", asyncHandler(artisansController.getNearby));
-artisansRoutes.get("/:id/public", asyncHandler(artisansController.getPublicProfile));
+artisansRoutes.get(
+  "/nearby",
+  nearbyLimiter,
+  validateQuery(nearbyQuerySchema),
+  asyncHandler(artisansController.getNearby),
+);
+artisansRoutes.get(
+  "/:id/public",
+  validateParams(uuidParamSchema),
+  asyncHandler(artisansController.getPublicProfile),
+);
 
-// Artisan authentifié
 artisansRoutes.use(authenticate, authorize("ARTISAN"));
 
 artisansRoutes.get("/me", asyncHandler(artisansController.getMe));
@@ -25,6 +36,6 @@ artisansRoutes.post("/me/payout-request", asyncHandler(artisansController.reques
 artisansRoutes.post("/me/subscription/upgrade", asyncHandler(artisansController.upgradeSubscription));
 artisansRoutes.post(
   "/me/kyc",
-  artisanKycUpload,
+  ...artisanKycUpload,
   asyncHandler(artisansController.uploadKyc),
 );

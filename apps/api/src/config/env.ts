@@ -16,6 +16,9 @@ const envSchema = z.object({
 
   JWT_PRIVATE_KEY: z.string().optional(),
   JWT_PUBLIC_KEY: z.string().optional(),
+  /** Clé publique précédente (rotation — tokens signés encore valides). */
+  JWT_PREVIOUS_PUBLIC_KEY: z.string().optional(),
+  JWT_KEY_ID: z.string().default("depanni-1"),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
@@ -86,7 +89,17 @@ function parseEnv(): Env {
     console.error("Invalid environment variables:", formatted);
     process.exit(1);
   }
-  return result.data;
+  const data = result.data;
+  if (data.NODE_ENV === "production") {
+    if (!data.JWT_PRIVATE_KEY || !data.JWT_PUBLIC_KEY) {
+      console.error("Production requires JWT_PRIVATE_KEY and JWT_PUBLIC_KEY");
+      process.exit(1);
+    }
+    if (!data.COOKIE_SECURE) {
+      console.warn("WARN: COOKIE_SECURE=false in production");
+    }
+  }
+  return data;
 }
 
 export const env = parseEnv();
