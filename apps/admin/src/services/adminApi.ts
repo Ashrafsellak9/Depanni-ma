@@ -24,6 +24,19 @@ export async function fetchOverview(): Promise<AdminOverview> {
   return unwrap<AdminOverview>(res);
 }
 
+export interface PageInfo {
+  nextCursor: string | null;
+  hasMore: boolean;
+  limit: number;
+}
+
+export interface CursorPaginated<T> {
+  items: T[];
+  pageInfo: PageInfo;
+  total?: number;
+}
+
+/** @deprecated offset pagination — prefer CursorPaginated */
 export interface Paginated<T> {
   items: T[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
@@ -39,11 +52,11 @@ export interface ArtisansListParams {
   accountStatus?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
-  page?: number;
+  cursor?: string;
   limit?: number;
 }
 
-export async function fetchArtisans(params?: ArtisansListParams): Promise<Paginated<ArtisanListItem>> {
+export async function fetchArtisans(params?: ArtisansListParams): Promise<CursorPaginated<ArtisanListItem>> {
   const res = await api.get("/admin/artisans", { params });
   return unwrap(res);
 }

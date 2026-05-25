@@ -8,6 +8,11 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { httpLogger } from "./middleware/logger.js";
 import { globalLimiter } from "./middleware/rateLimiter.js";
 import {
+  getMetricsContentType,
+  getMetricsText,
+  metricsMiddleware,
+} from "./monitoring/metrics.js";
+import {
   applyHelmet,
   forceHttps,
   httpParameterPollution,
@@ -48,9 +53,16 @@ export function createApp(): Express {
     }),
   );
   app.use(httpParameterPollution);
-  app.use(compression());
+  app.use(compression({ threshold: 1024 }));
   app.use(cookieParser());
   app.use(httpLogger);
+  app.use(metricsMiddleware);
+
+  app.get("/metrics", async (_req, res) => {
+    res.setHeader("Content-Type", getMetricsContentType());
+    res.end(await getMetricsText());
+  });
+
   app.use(globalLimiter);
 
   app.use(express.json({ limit: "10mb" }));

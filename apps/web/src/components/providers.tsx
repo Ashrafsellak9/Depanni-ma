@@ -8,9 +8,11 @@ import { Toaster } from "react-hot-toast";
 
 import { GoogleMapProvider } from "@/components/maps/GoogleMapProvider";
 import { getQueryClient } from "@/lib/queryClient";
+import { initWebSentry } from "@/lib/sentry";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
+  if (typeof window !== "undefined") initWebSentry();
 
   return (
     <SessionProvider>

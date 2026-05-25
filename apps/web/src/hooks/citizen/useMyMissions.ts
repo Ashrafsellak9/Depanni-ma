@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import { unwrapApi } from "@/lib/api-types";
-import type { CitizenJob, Pagination } from "@/types/citizen";
+import type { CitizenJob, PageInfo } from "@/types/citizen";
 import type { JobStatus } from "@/types";
 
 export interface MyMissionsFilters {
   status?: JobStatus;
-  page?: number;
+  cursor?: string;
   limit?: number;
 }
 
@@ -19,12 +19,12 @@ export function useMyMissions(filters: MyMissionsFilters = {}) {
     queryFn: async () => {
       const res = await api.get("/jobs/my", {
         params: {
-          page: filters.page ?? 1,
           limit: filters.limit ?? 20,
+          ...(filters.cursor ? { cursor: filters.cursor } : {}),
           ...(filters.status ? { status: filters.status } : {}),
         },
       });
-      return unwrapApi<{ items: CitizenJob[]; pagination: Pagination }>(res);
+      return unwrapApi<{ items: CitizenJob[]; pageInfo: PageInfo }>(res);
     },
   });
 }

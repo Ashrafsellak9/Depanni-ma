@@ -305,7 +305,8 @@ export class ArtisansService {
   async listMissions(userId: string, query: unknown) {
     const artisan = await this.getArtisanByUserId(userId);
     const params = missionsQuerySchema.parse(query);
-    const skip = (params.page - 1) * params.limit;
+    const { buildCursorPage, cursorWhereDesc } = await import("../../lib/pagination.js");
+    const cursorFilter = cursorWhereDesc(params.cursor);
 
     const where: Prisma.MissionWhereInput = {
       artisanId: artisan.id,
@@ -318,48 +319,37 @@ export class ArtisansService {
             ],
           }
         : {}),
+      ...(cursorFilter ?? {}),
     };
 
-    const [items, total] = await Promise.all([
-      prisma.mission.findMany({
-        where,
-        skip,
-        take: params.limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              city: true,
-              address: true,
-              lat: true,
-              lng: true,
-              urgency: true,
-              category: true,
-            },
-          },
-          citizen: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-          offer: {
-            select: { id: true, price: true, etaMinutes: true, status: true },
+    const rows = await prisma.mission.findMany({
+      where,
+      take: params.limit + 1,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            city: true,
+            address: true,
+            lat: true,
+            lng: true,
+            urgency: true,
+            category: true,
           },
         },
-      }),
-      prisma.mission.count({ where }),
-    ]);
-
-    return {
-      items,
-      pagination: {
-        page: params.page,
-        limit: params.limit,
-        total,
-        totalPages: Math.ceil(total / params.limit),
+        citizen: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        offer: {
+          select: { id: true, price: true, etaMinutes: true, status: true },
+        },
       },
-    };
+    });
+
+    return buildCursorPage(rows, params.limit);
   }
 
   async getMissionById(userId: string, missionId: string) {
@@ -428,6 +418,15 @@ export class ArtisansService {
   }
 
   async getPublicProfile(artisanId: string) {
+    const cacheKey = `artisan:profile:${artisanId}`;
+    const { cacheGet } = await import("../../lib/cache.js");
+    const cached = await cacheGet<Record<string, unknown>>(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<typeof this.buildPublicProfile>>;
+
+    return this.buildPublicProfile(artisanId, cacheKey);
+  }
+
+  private async buildPublicProfile(artisanId: string, cacheKey?: string) {
     const artisan = await prisma.artisan.findUnique({
       where: { id: artisanId },
       include: {
@@ -455,7 +454,7 @@ export class ArtisansService {
       },
     });
 
-    return {
+    const result = {
       id: artisan.id,
       firstName: artisan.firstName,
       lastName: artisan.lastName,
@@ -477,11 +476,28 @@ export class ArtisansService {
       })),
       realizationsCount: artisan.totalMissions,
     };
+
+    if (cacheKey) {
+      const { cacheSet } = await import("../../lib/cache.js");
+      await cacheSet(cacheKey, result, 300);
+    }
+    return result;
   }
 
   async findNearby(query: unknown) {
     const params: NearbyQueryInput = nearbyQuerySchema.parse(query);
 
+    const cacheKey = `nearby:${params.lat.toFixed(4)}:${params.lng.toFixed(4)}:${params.radius}:${params.category ?? "all"}:${params.limit}`;
+    const { cacheGet, cacheSet } = await import("../../lib/cache.js");
+    const cached = await cacheGet<unknown[]>(cacheKey);
+    if (cached) return cached as Awaited<ReturnType<typeof this.findNearbyUncached>>;
+
+    const result = await this.findNearbyUncached(params);
+    await cacheSet(cacheKey, result, 30);
+    return result;
+  }
+
+  private async findNearbyUncached(params: NearbyQueryInput) {
     let categorySlug: string | undefined;
     if (params.category) {
       const cat = await prisma.serviceCategory.findUnique({

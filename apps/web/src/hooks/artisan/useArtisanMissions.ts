@@ -10,7 +10,7 @@ import type { MissionStatus } from "@/types";
 export interface ArtisanMissionsFilters {
   status?: MissionStatus;
   search?: string;
-  page?: number;
+  cursor?: string;
   limit?: number;
 }
 
@@ -20,8 +20,8 @@ export function useArtisanMissions(filters: ArtisanMissionsFilters = {}) {
     queryFn: async () => {
       const res = await api.get("/artisans/me/missions", {
         params: {
-          page: filters.page ?? 1,
           limit: filters.limit ?? 20,
+          ...(filters.cursor ? { cursor: filters.cursor } : {}),
           ...(filters.status ? { status: filters.status } : {}),
           ...(filters.search ? { search: filters.search } : {}),
         },

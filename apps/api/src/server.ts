@@ -7,7 +7,11 @@ import { disconnectRedis } from "./config/redis.js";
 import { closeJobDiffusionQueue, startJobDiffusionWorker } from "./jobs/jobDiffusionQueue.js";
 import { startMonthlyReportScheduler } from "./jobs/monthlyReport.cron.js";
 import { closePayoutWorker, startPayoutWorker } from "./jobs/payout.worker.js";
+import { closeEmailWorker, startEmailWorker } from "./jobs/email.worker.js";
+import { closePdfWorker, startPdfWorker } from "./jobs/pdf.worker.js";
+import { closeSmsWorker, startSmsWorker } from "./jobs/sms.worker.js";
 import { closeQueues } from "./jobs/queues.js";
+import { initSentry } from "./monitoring/sentry.js";
 import { createApp } from "./app.js";
 import { closeSocket, initSocket } from "./socket/index.js";
 import { logger } from "./utils/logger.js";
@@ -18,9 +22,13 @@ const httpServer = createServer(app);
 let isShuttingDown = false;
 
 async function bootstrap(): Promise<void> {
+  initSentry();
   assertJwtKeyPairAtStartup();
   startJobDiffusionWorker();
   startPayoutWorker();
+  startEmailWorker();
+  startSmsWorker();
+  startPdfWorker();
   startMonthlyReportScheduler();
   await initSocket(httpServer);
 
@@ -44,6 +52,9 @@ async function shutdown(signal: string): Promise<void> {
   await closeSocket();
   await closeJobDiffusionQueue();
   await closePayoutWorker();
+  await closeEmailWorker();
+  await closeSmsWorker();
+  await closePdfWorker();
   await closeQueues();
   await disconnectRedis();
   await disconnectDb();

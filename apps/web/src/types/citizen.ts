@@ -1,5 +1,12 @@
 import type { JobStatus, JobUrgency, MissionStatus, OfferStatus } from "@/types";
 
+export interface PageInfo {
+  nextCursor: string | null;
+  hasMore: boolean;
+  limit: number;
+}
+
+/** @deprecated — API uses cursor pagination */
 export interface Pagination {
   page: number;
   limit: number;

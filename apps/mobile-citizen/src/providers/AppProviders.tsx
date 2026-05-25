@@ -5,8 +5,11 @@ import { PaperProvider } from "react-native-paper";
 import { useMemo } from "react";
 import { StyleSheet } from "react-native";
 
+import { initMobileSentry } from "@/src/lib/sentry";
 import { NotificationProvider } from "@/src/providers/NotificationProvider";
 import { theme } from "@/src/theme";
+
+initMobileSentry();
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -18,7 +21,9 @@ export function AppProviders({ children }: AppProvidersProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30_000,
+            staleTime: 5 * 60 * 1000,
+            gcTime: 10 * 60 * 1000,
+            refetchOnWindowFocus: false,
             retry: 1,
           },
         },

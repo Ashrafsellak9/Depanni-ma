@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { useCallback } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+
+import {
+  FLATLIST_PERF_DEFAULTS,
+  missionGetItemLayout,
+} from "@/src/lib/flatListPerf";
 import { ActivityIndicator } from "react-native-paper";
 
 import { api, unwrapApi } from "@/src/lib/api";
@@ -19,7 +25,7 @@ export default function MissionsScreen() {
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["my-missions"],
     queryFn: async () => {
-      const res = await api.get("/jobs/my", { params: { page: 1, limit: 30 } });
+      const res = await api.get("/jobs/my", { params: { limit: 30 } });
       return unwrapApi<{ items: CitizenJob[] }>(res);
     },
   });
@@ -33,6 +39,18 @@ export default function MissionsScreen() {
   }
 
   const items = data?.items ?? [];
+  const keyExtractor = useCallback((item: CitizenJob) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: CitizenJob }) => (
+      <Pressable style={styles.card} onPress={() => router.push(`/mission/${item.id}`)}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardMeta}>
+          {item.category?.nameFr ?? "Service"} · {item.status}
+        </Text>
+      </Pressable>
+    ),
+    [router],
+  );
 
   return (
     <View style={styles.container}>
@@ -40,23 +58,15 @@ export default function MissionsScreen() {
 
       <FlatList
         data={items}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        getItemLayout={missionGetItemLayout}
         refreshing={isRefetching}
         onRefresh={refetch}
         ListEmptyComponent={
           <Text style={styles.empty}>Aucune mission pour le moment.</Text>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() => router.push(`/mission/${item.id}`)}
-          >
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardMeta}>
-              {item.category?.nameFr ?? "Service"} · {item.status}
-            </Text>
-          </Pressable>
-        )}
+        {...FLATLIST_PERF_DEFAULTS}
       />
     </View>
   );

@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { memo, useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ArtisanMission } from "@/src/types/artisan";
@@ -39,7 +40,7 @@ export function MissionListItem({ mission }: MissionListItemProps) {
       <Text style={styles.price}>{mission.offer.price} MAD</Text>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

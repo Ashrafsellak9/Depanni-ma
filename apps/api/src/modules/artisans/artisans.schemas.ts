@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { cursorListQuerySchema } from "../../lib/pagination.js";
+
 const geoPointSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
@@ -36,13 +38,11 @@ export const rejectKycSchema = z.object({
   reason: z.string().min(5).max(500),
 });
 
-export const missionsQuerySchema = z.object({
+export const missionsQuerySchema = cursorListQuerySchema.extend({
   status: z
     .enum(["ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "DISPUTED"])
     .optional(),
   search: z.string().max(100).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
 export const payoutRequestSchema = z.object({

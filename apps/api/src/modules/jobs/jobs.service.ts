@@ -11,6 +11,11 @@ import {
   scheduleDiffusion,
 } from "./jobs.diffusion.js";
 import {
+  buildCursorPage,
+  cursorWhereDesc,
+} from "../../lib/pagination.js";
+import { jobsCreatedTotal } from "../../monitoring/metrics.js";
+import {
   activeJobsQuerySchema,
   createJobSchema,
   myJobsQuerySchema,
@@ -98,6 +103,7 @@ export class JobsService {
 
     await broadcastNewJob(job.id);
     await scheduleDiffusion(job.id);
+    jobsCreatedTotal.inc();
 
     return job;
   }
@@ -123,36 +129,30 @@ export class JobsService {
   }
 
   async listMy(citizenId: string, query: unknown) {
-    const { page, limit, status } = myJobsQuerySchema.parse(query);
-    const skip = (page - 1) * limit;
+    const { cursor, limit, status } = myJobsQuerySchema.parse(query);
+    const cursorFilter = cursorWhereDesc(cursor);
 
     const where = {
       citizenId,
       ...(status ? { status } : {}),
+      ...(cursorFilter ?? {}),
     };
 
-    const [items, total] = await Promise.all([
-      prisma.job.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: { select: { offers: true } },
-          mission: {
-            include: {
-              artisan: { select: { id: true, firstName: true, lastName: true } },
-            },
+    const rows = await prisma.job.findMany({
+      where,
+      take: limit + 1,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        _count: { select: { offers: true } },
+        mission: {
+          include: {
+            artisan: { select: { id: true, firstName: true, lastName: true } },
           },
         },
-      }),
-      prisma.job.count({ where }),
-    ]);
+      },
+    });
 
-    return {
-      items,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    };
+    return buildCursorPage(rows, limit);
   }
 
   async cancel(jobId: string, citizenId: string) {

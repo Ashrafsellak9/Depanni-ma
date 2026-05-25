@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { cursorListQuerySchema } from "../../lib/pagination.js";
+
 const geoPointSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
@@ -25,9 +27,7 @@ export const createAddressSchema = z.object({
   isDefault: z.boolean().optional(),
 });
 
-export const historyQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+export const historyQuerySchema = cursorListQuerySchema.extend({
   status: z.string().optional(),
 });
 

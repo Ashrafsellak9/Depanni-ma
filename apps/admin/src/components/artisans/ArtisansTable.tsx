@@ -300,7 +300,7 @@ export function ArtisansTable() {
         </table>
       </div>
       <p className="text-xs text-slate-500">
-        {data?.pagination.total ?? 0} artisans — {Object.keys(rowSelection).length} sélectionné(s)
+        {data?.total ?? data?.items.length ?? 0} artisans — {Object.keys(rowSelection).length} sélectionné(s)
       </p>
     </div>
   );

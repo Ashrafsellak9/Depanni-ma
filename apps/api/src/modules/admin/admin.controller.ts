@@ -23,7 +23,7 @@ export class AdminController {
       await adminService.listMissions({
         status: req.query.status as string | undefined,
         search: req.query.search as string | undefined,
-        page: Number(req.query.page ?? 1),
+        cursor: typeof req.query.cursor === "string" ? req.query.cursor : undefined,
         limit: Number(req.query.limit ?? 20),
       }),
     );
@@ -64,10 +64,9 @@ export class AdminController {
   };
 
   listCitizens = async (req: Request, res: Response): Promise<void> => {
-    sendSuccess(
-      res,
-      await adminService.listCitizens(Number(req.query.page ?? 1), Number(req.query.limit ?? 20)),
-    );
+    const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+    const limit = Number(req.query.limit ?? 20);
+    sendSuccess(res, await adminService.listCitizens(cursor, limit));
   };
 
   approveKyc = async (req: Request, res: Response): Promise<void> => {

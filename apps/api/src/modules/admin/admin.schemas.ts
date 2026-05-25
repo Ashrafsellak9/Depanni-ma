@@ -1,20 +1,24 @@
 import { z } from "zod";
 
-export const artisansListSchema = z.object({
-  search: z.string().max(120).optional(),
-  kyc: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
-  specialty: z.string().max(80).optional(),
-  city: z.string().max(80).optional(),
-  ratingMin: z.coerce.number().min(0).max(5).optional(),
-  subscription: z.enum(["STANDARD", "PREMIUM", "PRO"]).optional(),
-  accountStatus: z.enum(["ACTIVE", "SUSPENDED", "BANNED"]).optional(),
-  sortBy: z
-    .enum(["createdAt", "rating", "totalMissions", "monthRevenue", "firstName"])
-    .default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(200).default(50),
-});
+import { cursorListQuerySchema } from "../../lib/pagination.js";
+
+export const artisansListSchema = cursorListQuerySchema
+  .extend({
+    search: z.string().max(120).optional(),
+    kyc: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
+    specialty: z.string().max(80).optional(),
+    city: z.string().max(80).optional(),
+    ratingMin: z.coerce.number().min(0).max(5).optional(),
+    subscription: z.enum(["STANDARD", "PREMIUM", "PRO"]).optional(),
+    accountStatus: z.enum(["ACTIVE", "SUSPENDED", "BANNED"]).optional(),
+    sortBy: z
+      .enum(["createdAt", "rating", "totalMissions", "monthRevenue", "firstName"])
+      .default("createdAt"),
+    sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  })
+  .extend({
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+  });
 
 export const rejectKycAdminSchema = z.object({
   reason: z.string().min(5).max(500),

@@ -25,6 +25,7 @@
     "expo-av": "~13.10.6",
     "expo-constants": "~15.4.6",
     "expo-haptics": "~12.8.1",
+    "expo-image": "~1.10.6",
     "expo-image-picker": "~14.7.1",
     "expo-linking": "~6.2.2",
     "expo-location": "~16.5.5",

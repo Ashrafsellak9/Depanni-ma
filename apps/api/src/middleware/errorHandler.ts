@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import type { ApiResponse } from "@depanni/types";
 
 import { env } from "../config/env.js";
+import { captureException } from "../monitoring/sentry.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
@@ -51,6 +52,7 @@ export function errorHandler(
     err: err instanceof Error ? err.message : String(err),
     stack: err instanceof Error ? err.stack : undefined,
   });
+  captureException(err);
 
   const body: ApiResponse<never> = {
     success: false,

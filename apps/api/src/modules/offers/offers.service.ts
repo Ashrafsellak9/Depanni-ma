@@ -4,6 +4,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors
 import { paymentsService } from "../payments/payments.service.js";
 import { citizenUserRoom, publishJobEvent } from "../jobs/jobs.events.js";
 import { closeOffersIfMaxReached } from "../jobs/jobs.diffusion.js";
+import { missionsCompletedTotal, offersSubmittedTotal } from "../../monitoring/metrics.js";
 import { createOfferSchema, type CreateOfferInput } from "../jobs/jobs.schemas.js";
 
 export class OffersService {
@@ -79,6 +80,7 @@ export class OffersService {
     });
 
     await closeOffersIfMaxReached(jobId);
+    offersSubmittedTotal.inc();
 
     const citizen = await prisma.citizen.findUnique({
       where: { id: job.citizenId },
@@ -311,6 +313,7 @@ export class OffersService {
       await paymentsService.onMissionCompleted(mission.id, mission.citizenId);
     }
 
+    missionsCompletedTotal.inc();
     return result;
   }
 

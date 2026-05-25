@@ -1,5 +1,10 @@
-import { useMemo, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+
+import {
+  FLATLIST_PERF_DEFAULTS,
+  missionGetItemLayout,
+} from "@/src/lib/flatListPerf";
 import { Button, Chip } from "react-native-paper";
 
 import { MissionListItem } from "@/src/components/dashboard/MissionListItem";
@@ -24,6 +29,11 @@ export default function MissionsScreen(): ReactElement {
   });
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
+  const renderItem = useCallback(
+    ({ item }: { item: (typeof items)[number] }) => <MissionListItem mission={item} />,
+    [],
+  );
+  const keyExtractor = useCallback((m: (typeof items)[number]) => m.id, []);
 
   return (
     <View style={styles.flex}>
@@ -51,11 +61,13 @@ export default function MissionsScreen(): ReactElement {
 
       <FlatList
         data={items}
-        keyExtractor={(m) => m.id}
-        renderItem={({ item }) => <MissionListItem mission={item} />}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        getItemLayout={missionGetItemLayout}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
         ListEmptyComponent={<Text style={styles.empty}>Aucune mission</Text>}
+        {...FLATLIST_PERF_DEFAULTS}
       />
     </View>
   );

@@ -1,5 +1,5 @@
 import type { JobStatus, JobUrgency, MissionStatus, OfferStatus } from "@/types";
-import type { Pagination } from "@/types/citizen";
+import type { PageInfo } from "@/types/citizen";
 
 export interface ArtisanProfile {
   id: string;
@@ -125,5 +125,5 @@ export interface ActiveJobFeed {
 
 export interface MissionsListResponse {
   items: ArtisanMission[];
-  pagination: Pagination;
+  pageInfo: PageInfo;
 }

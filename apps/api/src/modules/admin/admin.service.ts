@@ -197,12 +197,12 @@ export class AdminService {
   async listMissions(query: {
     status?: string;
     search?: string;
-    page?: number;
+    cursor?: string;
     limit?: number;
   }) {
-    const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const skip = (page - 1) * limit;
+    const { buildCursorPage, cursorWhereDesc } = await import("../../lib/pagination.js");
+    const cursorFilter = cursorWhereDesc(query.cursor);
 
     const where = {
       ...(query.status ? { status: query.status as never } : {}),
@@ -214,35 +214,32 @@ export class AdminService {
             ],
           }
         : {}),
+      ...(cursorFilter ?? {}),
     };
 
-    const [items, total] = await Promise.all([
-      prisma.mission.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          job: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              city: true,
-              urgency: true,
-              lat: true,
-              lng: true,
-            },
+    const rows = await prisma.mission.findMany({
+      where,
+      take: limit + 1,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            city: true,
+            urgency: true,
+            lat: true,
+            lng: true,
           },
-          artisan: { select: { id: true, firstName: true, lastName: true } },
-          citizen: { select: { id: true, firstName: true, lastName: true } },
-          offer: { select: { id: true, price: true, status: true } },
         },
-      }),
-      prisma.mission.count({ where }),
-    ]);
+        artisan: { select: { id: true, firstName: true, lastName: true } },
+        citizen: { select: { id: true, firstName: true, lastName: true } },
+        offer: { select: { id: true, price: true, status: true } },
+      },
+    });
 
-    return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    return buildCursorPage(rows, limit);
   }
 
   async getMission(id: string) {
@@ -261,8 +258,8 @@ export class AdminService {
   }
 
   async listArtisans(query: ArtisansListQuery) {
-    const { page, limit, sortBy, sortOrder } = query;
-    const skip = (page - 1) * limit;
+    const { cursor, limit, sortBy, sortOrder } = query;
+    const { buildCursorPage, cursorWhereDesc } = await import("../../lib/pagination.js");
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -298,41 +295,28 @@ export class AdminService {
       ];
     }
 
-    const orderBy: Prisma.ArtisanOrderByWithRelationInput =
-      sortBy === "firstName"
-        ? { firstName: sortOrder }
-        : sortBy === "rating"
-          ? { rating: sortOrder }
-          : sortBy === "totalMissions"
-            ? { totalMissions: sortOrder }
-            : { createdAt: sortOrder };
-
-    const [rawItems, total] = await Promise.all([
-      prisma.artisan.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              email: true,
-              phone: true,
-              isVerified: true,
-              accountStatus: true,
-              createdAt: true,
-            },
-          },
-          missions: {
-            where: {
-              status: "COMPLETED",
-              completedAt: { gte: startOfMonth },
-            },
-            select: { artisanNet: true },
-          },
+    const include = {
+      user: {
+        select: {
+          email: true,
+          phone: true,
+          isVerified: true,
+          accountStatus: true,
+          createdAt: true,
         },
-      }),
-      prisma.artisan.count({ where }),
-    ]);
+      },
+      missions: {
+        where: {
+          status: "COMPLETED" as const,
+          completedAt: { gte: startOfMonth },
+        },
+        select: { artisanNet: true },
+      },
+    } satisfies Prisma.ArtisanInclude;
 
-    let items = rawItems.map((a) => ({
+    type ArtisanListRow = Prisma.ArtisanGetPayload<{ include: typeof include }>;
+
+    const mapArtisan = (a: ArtisanListRow) => ({
       id: a.id,
       firstName: a.firstName,
       lastName: a.lastName,
@@ -347,25 +331,50 @@ export class AdminService {
       monthRevenue: a.missions.reduce((s, m) => s + m.artisanNet, 0),
       user: a.user,
       createdAt: a.createdAt,
-    }));
+    });
 
     if (sortBy === "monthRevenue") {
-      items = items.sort((a, b) =>
+      const rawItems = await prisma.artisan.findMany({ where, include });
+      let items = rawItems.map(mapArtisan).sort((a, b) =>
         sortOrder === "asc" ? a.monthRevenue - b.monthRevenue : b.monthRevenue - a.monthRevenue,
       );
-    } else {
-      items = items.sort((a, b) => {
-        const dir = sortOrder === "asc" ? 1 : -1;
-        if (sortBy === "rating") return (a.rating - b.rating) * dir;
-        if (sortBy === "totalMissions") return (a.totalMissions - b.totalMissions) * dir;
-        if (sortBy === "firstName") return a.firstName.localeCompare(b.firstName) * dir;
-        return (a.createdAt.getTime() - b.createdAt.getTime()) * dir;
-      });
+      if (cursor) {
+        const decoded = (await import("../../lib/pagination.js")).decodeCursor(cursor);
+        if (decoded) {
+          const idx = items.findIndex((i) => i.id === decoded.id);
+          if (idx >= 0) items = items.slice(idx + 1);
+        }
+      }
+      const page = buildCursorPage(
+        items.slice(0, limit + 1).map((i) => ({ ...i, id: i.id, createdAt: i.createdAt })),
+        limit,
+      );
+      const total = await prisma.artisan.count({ where });
+      return { items: page.items, pageInfo: page.pageInfo, total };
     }
 
-    const paged = items.slice(skip, skip + limit);
+    const orderBy: Prisma.ArtisanOrderByWithRelationInput =
+      sortBy === "firstName"
+        ? { firstName: sortOrder }
+        : sortBy === "rating"
+          ? { rating: sortOrder }
+          : sortBy === "totalMissions"
+            ? { totalMissions: sortOrder }
+            : { createdAt: sortOrder };
 
-    return { items: paged, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    const rows = await prisma.artisan.findMany({
+      where: { ...where, ...(cursorWhereDesc(cursor) ?? {}) },
+      include,
+      take: limit + 1,
+      orderBy: [orderBy, { id: sortOrder }],
+    });
+
+    const page = buildCursorPage(
+      rows.map((a) => ({ ...mapArtisan(a), id: a.id, createdAt: a.createdAt })),
+      limit,
+    );
+    const total = await prisma.artisan.count({ where });
+    return { items: page.items, pageInfo: page.pageInfo, total };
   }
 
   async getArtisan(id: string) {
@@ -556,21 +565,20 @@ export class AdminService {
     return { ok: true, deliveredVia: ["audit", "email"] };
   }
 
-  async listCitizens(page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const [items, total] = await Promise.all([
-      prisma.citizen.findMany({
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: { select: { email: true, phone: true, isVerified: true, createdAt: true } },
-          _count: { select: { jobs: true } },
-        },
-      }),
-      prisma.citizen.count(),
-    ]);
-    return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  async listCitizens(cursor?: string, limit = 20) {
+    const { buildCursorPage, cursorWhereDesc } = await import("../../lib/pagination.js");
+    const rows = await prisma.citizen.findMany({
+      where: cursorWhereDesc(cursor) ?? {},
+      take: limit + 1,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        user: { select: { email: true, phone: true, isVerified: true, createdAt: true } },
+        _count: { select: { jobs: true } },
+      },
+    });
+    const page = buildCursorPage(rows, limit);
+    const total = await prisma.citizen.count();
+    return { items: page.items, pageInfo: page.pageInfo, total };
   }
 
   async listUsers(page = 1, limit = 20) {

@@ -11,6 +11,10 @@ const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .default("postgresql://depanni:depanni_dev@localhost:5433/depanni?schema=public"),
+  /** Prisma pool size (appended to DATABASE_URL as connection_limit). */
+  DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(50).default(10),
+
+  SENTRY_DSN: z.string().url().optional(),
 
   REDIS_URL: z.string().default("redis://localhost:6379"),
 

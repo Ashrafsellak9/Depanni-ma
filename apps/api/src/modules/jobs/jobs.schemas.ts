@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { cursorListQuerySchema } from "../../lib/pagination.js";
+
 export const createJobSchema = z.object({
   categoryId: z.string().uuid(),
   subcategory: z.string().min(1).max(80).optional(),
@@ -16,9 +18,7 @@ export const createJobSchema = z.object({
   photos: z.array(z.string().url()).max(5).optional(),
 });
 
-export const myJobsQuerySchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+export const myJobsQuerySchema = cursorListQuerySchema.extend({
   status: z
     .enum(["PENDING", "ACTIVE", "IN_PROGRESS", "COMPLETED", "CANCELLED", "EXPIRED"])
     .optional(),

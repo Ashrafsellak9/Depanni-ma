@@ -221,46 +221,36 @@ export class UsersService {
 
   async getHistory(userId: string, query: unknown) {
     const citizenId = await getCitizenIdByUserId(userId);
-    const { page, limit, status }: HistoryQueryInput = historyQuerySchema.parse(query);
-    const skip = (page - 1) * limit;
+    const { cursor, limit, status }: HistoryQueryInput = historyQuerySchema.parse(query);
+    const { buildCursorPage, cursorWhereDesc } = await import("../../lib/pagination.js");
+    const cursorFilter = cursorWhereDesc(cursor);
 
     const where = {
       citizenId,
       ...(status ? { status: status as JobStatus } : {}),
+      ...(cursorFilter ?? {}),
     };
 
-    const [items, total] = await Promise.all([
-      prisma.job.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          offers: {
-            select: {
-              id: true,
-              status: true,
-              price: true,
-              artisan: {
-                select: { id: true, firstName: true, lastName: true, avatar: true },
-              },
+    const rows = await prisma.job.findMany({
+      where,
+      take: limit + 1,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: {
+        offers: {
+          select: {
+            id: true,
+            status: true,
+            price: true,
+            artisan: {
+              select: { id: true, firstName: true, lastName: true, avatar: true },
             },
           },
-          mission: { select: { id: true, status: true } },
         },
-      }),
-      prisma.job.count({ where }),
-    ]);
-
-    return {
-      items,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        mission: { select: { id: true, status: true } },
       },
-    };
+    });
+
+    return buildCursorPage(rows, limit);
   }
 
   async assertCitizen(userId: string): Promise<void> {

@@ -1,12 +1,17 @@
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@depanni/types", "@depanni/validators"],
   reactStrictMode: true,
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "**" },
-    ],
+    formats: ["image/webp"],
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);
