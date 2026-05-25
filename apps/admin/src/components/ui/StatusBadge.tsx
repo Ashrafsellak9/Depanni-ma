@@ -13,6 +13,9 @@ const STATUS_STYLES: Record<string, string> = {
   REJECTED: "bg-red-100 text-red-800",
   ONLINE: "bg-emerald-100 text-emerald-800",
   OFFLINE: "bg-gray-100 text-gray-600",
+  PROCESSING: "bg-blue-100 text-blue-800",
+  DONE: "bg-emerald-100 text-emerald-800",
+  FAILED: "bg-red-100 text-red-800",
 };
 
 export function StatusBadge({ status }: { status: string }) {

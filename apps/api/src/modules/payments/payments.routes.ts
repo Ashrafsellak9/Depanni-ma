@@ -26,6 +26,7 @@ export const paymentsAdminRoutes: IRouter = Router();
 paymentsAdminRoutes.use(authenticate, authorize("ADMIN"));
 paymentsAdminRoutes.post("/payouts", asyncHandler(paymentsController.adminCreatePayout));
 paymentsAdminRoutes.post("/payouts/batch", asyncHandler(paymentsController.adminBatchPayout));
+paymentsAdminRoutes.post("/payouts/batch-pending", asyncHandler(paymentsController.adminProcessPendingPayouts));
 paymentsAdminRoutes.get("/payouts", asyncHandler(paymentsController.adminListPayouts));
 paymentsAdminRoutes.post(
   "/payments/:paymentId/refund/initiate",

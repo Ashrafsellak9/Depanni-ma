@@ -89,10 +89,15 @@ export class PaymentsAdminService {
     return { batchId, results };
   }
 
-  async listPayouts(page = 1, limit = 20) {
+  async listPayouts(query: { page?: number; limit?: number; status?: string }) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
     const skip = (page - 1) * limit;
+    const where = query.status ? { status: query.status as never } : {};
+
     const [items, total] = await Promise.all([
       prisma.payout.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
@@ -102,10 +107,76 @@ export class PaymentsAdminService {
           },
         },
       }),
-      prisma.payout.count(),
+      prisma.payout.count({ where }),
     ]);
 
-    return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    const mapped = items.map((p) => {
+      const bank = p.bankDetails as { iban?: string; bankName?: string } | null;
+      return {
+        ...p,
+        iban: bank?.iban ?? p.reference ?? null,
+        bankName: bank?.bankName ?? null,
+      };
+    });
+
+    return { items: mapped, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
+  /** Traite tous les virements en statut PENDING (débit wallet + file payout). */
+  async processPendingPayoutsBatch(adminId: string) {
+    const pending = await prisma.payout.findMany({
+      where: { status: "PENDING" },
+      include: { artisan: true },
+    });
+
+    const results: Array<{ payoutId: string; success: boolean; error?: string }> = [];
+
+    for (const payout of pending) {
+      try {
+        const wallet = await walletService.getOrCreateWallet(payout.artisanId);
+        if (wallet.balance < payout.amount) {
+          throw new ConflictError("Solde insuffisant");
+        }
+
+        await prisma.$transaction(async (tx) => {
+          const balanceBefore = wallet.balance;
+          const updatedWallet = await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { decrement: payout.amount } },
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              artisanId: payout.artisanId,
+              type: "PAYOUT",
+              amount: -payout.amount,
+              balanceBefore,
+              balanceAfter: updatedWallet.balance,
+              reference: payout.id,
+              description: "Virement batch admin",
+            },
+          });
+
+          await tx.payout.update({
+            where: { id: payout.id },
+            data: { status: "PROCESSING", initiatedBy: adminId },
+          });
+        });
+
+        await enqueuePayout({
+          artisanId: payout.artisanId,
+          amount: payout.amount,
+          currency: "MAD",
+          payoutId: payout.id,
+        });
+
+        results.push({ payoutId: payout.id, success: true });
+      } catch (err) {
+        results.push({ payoutId: payout.id, success: false, error: String(err) });
+      }
+    }
+
+    return { processed: results.filter((r) => r.success).length, total: pending.length, results };
   }
 
   async initiateRefund(paymentId: string, adminId: string, body: unknown) {

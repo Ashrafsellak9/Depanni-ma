@@ -11,6 +11,11 @@ adminRoutes.use(authenticate, authorize("ADMIN"));
 adminRoutes.get("/dashboard", asyncHandler(adminController.dashboard));
 adminRoutes.get("/overview", asyncHandler(adminController.overview));
 
+adminRoutes.get("/analytics", asyncHandler(adminController.analytics));
+adminRoutes.get("/finances/revenue", asyncHandler(adminController.revenueReport));
+adminRoutes.get("/finances/transactions", asyncHandler(adminController.transactionsExport));
+adminRoutes.get("/finances/monthly-report", asyncHandler(adminController.monthlyReportPreview));
+
 adminRoutes.get("/missions", asyncHandler(adminController.listMissions));
 adminRoutes.get("/missions/:id", asyncHandler(adminController.getMission));
 

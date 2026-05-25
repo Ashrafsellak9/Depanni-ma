@@ -72,6 +72,9 @@ const envSchema = z.object({
   SOCKET_CORS_ORIGIN: z.string().optional(),
 
   LOG_LEVEL: z.enum(["error", "warn", "info", "http", "debug"]).default("info"),
+
+  /** Email comptable — rapport mensuel automatique le 1er du mois */
+  ACCOUNTING_EMAIL: z.string().email().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

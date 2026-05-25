@@ -4,6 +4,7 @@ import { disconnectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { disconnectRedis } from "./config/redis.js";
 import { closeJobDiffusionQueue, startJobDiffusionWorker } from "./jobs/jobDiffusionQueue.js";
+import { startMonthlyReportScheduler } from "./jobs/monthlyReport.cron.js";
 import { closePayoutWorker, startPayoutWorker } from "./jobs/payout.worker.js";
 import { closeQueues } from "./jobs/queues.js";
 import { createApp } from "./app.js";
@@ -18,6 +19,7 @@ let isShuttingDown = false;
 async function bootstrap(): Promise<void> {
   startJobDiffusionWorker();
   startPayoutWorker();
+  startMonthlyReportScheduler();
   await initSocket(httpServer);
 
   httpServer.listen(env.API_PORT, () => {

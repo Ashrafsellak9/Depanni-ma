@@ -1,6 +1,18 @@
 import { api, unwrap } from "@/lib/api";
 import type { AdminOverview } from "@/types/admin";
+import type {
+  AnalyticsDashboard,
+  AnalyticsPeriod,
+  PayoutRow,
+  RevenueReport,
+} from "@/types/analytics";
 import type { ArtisanListItem, DisputeListItem, KycPendingItem, KycStats } from "@/types/moderation";
+
+export interface PeriodParams {
+  period?: AnalyticsPeriod;
+  from?: string;
+  to?: string;
+}
 
 export async function loginAdmin(email: string, password: string) {
   const res = await api.post("/auth/login", { email, password });
@@ -139,4 +151,38 @@ export async function fetchMission(id: string) {
 export async function fetchClients(page = 1) {
   const res = await api.get("/admin/clients", { params: { page } });
   return unwrap<Paginated<Record<string, unknown>>>(res);
+}
+
+export async function fetchAnalytics(params: PeriodParams): Promise<AnalyticsDashboard> {
+  const res = await api.get("/admin/analytics", { params });
+  return unwrap(res);
+}
+
+export async function fetchRevenueReport(params: PeriodParams): Promise<RevenueReport> {
+  const res = await api.get("/admin/finances/revenue", { params });
+  return unwrap(res);
+}
+
+export async function fetchTransactionsExport(params: PeriodParams) {
+  const res = await api.get("/admin/finances/transactions", { params });
+  return unwrap<{
+    missions: Record<string, unknown>[];
+    walletTransactions: Record<string, unknown>[];
+    payouts: Record<string, unknown>[];
+  }>(res);
+}
+
+export async function fetchPayouts(status?: string) {
+  const res = await api.get("/admin/payouts", { params: { limit: 100, status } });
+  return unwrap<Paginated<PayoutRow>>(res);
+}
+
+export async function processPendingPayoutsBatch() {
+  const res = await api.post("/admin/payouts/batch-pending");
+  return unwrap<{ processed: number; total: number }>(res);
+}
+
+export async function batchPayoutArtisans(artisanIds: string[]) {
+  const res = await api.post("/admin/payouts/batch", { artisanIds });
+  return unwrap(res);
 }

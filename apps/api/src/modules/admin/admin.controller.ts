@@ -2,7 +2,9 @@ import type { Request, Response } from "express";
 
 import { getParam } from "../../utils/params.js";
 import { sendSuccess } from "../../utils/response.js";
-import { artisansListSchema } from "./admin.schemas.js";
+import { adminAnalyticsService } from "./admin.analytics.service.js";
+import { adminFinancesService } from "./admin.finances.service.js";
+import { artisansListSchema, analyticsQuerySchema } from "./admin.schemas.js";
 import * as disputes from "./admin.disputes.js";
 import { adminService } from "./admin.service.js";
 
@@ -115,6 +117,28 @@ export class AdminController {
     const { resolveDisputeSchema } = await import("./admin.schemas.js");
     const input = resolveDisputeSchema.parse(req.body);
     sendSuccess(res, await disputes.resolveDispute(getParam(req, "id"), req.user!.id, input));
+  };
+
+  analytics = async (req: Request, res: Response): Promise<void> => {
+    const q = analyticsQuerySchema.parse(req.query);
+    sendSuccess(
+      res,
+      await adminAnalyticsService.getAnalytics(q.period, q.from, q.to),
+    );
+  };
+
+  revenueReport = async (req: Request, res: Response): Promise<void> => {
+    const q = analyticsQuerySchema.parse(req.query);
+    sendSuccess(res, await adminFinancesService.getRevenueReport(q.period, q.from, q.to));
+  };
+
+  transactionsExport = async (req: Request, res: Response): Promise<void> => {
+    const q = analyticsQuerySchema.parse(req.query);
+    sendSuccess(res, await adminFinancesService.getTransactionsExport(q.period, q.from, q.to));
+  };
+
+  monthlyReportPreview = async (_req: Request, res: Response): Promise<void> => {
+    sendSuccess(res, await adminFinancesService.getMonthlyReportData());
   };
 }
 

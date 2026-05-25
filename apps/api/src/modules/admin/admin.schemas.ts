@@ -43,3 +43,9 @@ export const resolveDisputeSchema = z.object({
 
 export type ArtisansListQuery = z.infer<typeof artisansListSchema>;
 export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>;
+
+export const analyticsQuerySchema = z.object({
+  period: z.enum(["7d", "30d", "90d", "12m", "custom"]).default("30d"),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+});

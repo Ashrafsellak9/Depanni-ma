@@ -82,10 +82,17 @@ export class PaymentsController {
   };
 
   adminListPayouts = async (req: Request, res: Response): Promise<void> => {
-    const page = Number(req.query.page ?? 1);
-    const limit = Number(req.query.limit ?? 20);
-    const data = await paymentsAdminService.listPayouts(page, limit);
+    const data = await paymentsAdminService.listPayouts({
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 50),
+      status: req.query.status as string | undefined,
+    });
     sendSuccess(res, data);
+  };
+
+  adminProcessPendingPayouts = async (req: Request, res: Response): Promise<void> => {
+    const result = await paymentsAdminService.processPendingPayoutsBatch(req.user!.id);
+    sendSuccess(res, result);
   };
 
   adminInitiateRefund = async (req: Request, res: Response): Promise<void> => {
