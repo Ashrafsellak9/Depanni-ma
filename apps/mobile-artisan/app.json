@@ -1,28 +1,63 @@
 {
   "expo": {
-    "name": "DEPANNI Artisan",
+    "name": "DEPANNI Pro",
     "slug": "depanni-artisan",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "depanni-artisan",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#15803d"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "ma.depanni.artisan"
+      "bundleIdentifier": "ma.depanni.artisan",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "DEPANNI Pro utilise votre position pour recevoir des demandes à proximité.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "DEPANNI Pro met à jour votre position pendant que vous êtes disponible.",
+        "UIBackgroundModes": ["location"]
+      },
+      "config": {
+        "googleMapsApiKey": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
+      }
     },
     "android": {
       "package": "ma.depanni.artisan",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#15803d"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "${EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}"
+        }
       }
     },
-    "plugins": ["expo-router", "expo-notifications"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "DEPANNI Pro utilise votre position pour les demandes proches.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      "expo-notifications"
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": { "origin": false }
     }
   }
 }

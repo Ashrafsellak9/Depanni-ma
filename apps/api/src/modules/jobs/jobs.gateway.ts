@@ -2,6 +2,7 @@ import type { Server, Socket } from "socket.io";
 
 import { getRedis } from "../../config/redis.js";
 import { logger } from "../../utils/logger.js";
+import { artisanRoom, userRoom } from "../../socket/socketAuth.js";
 import { emitJobEventLocally, JOBS_REDIS_CHANNEL, type JobEventPayload } from "./jobs.events.js";
 
 let subscriberInitialized = false;
@@ -28,7 +29,18 @@ export function initJobsRedisSubscriber(_io: Server): void {
 
 /** Handlers Socket.io par connexion (appelé depuis chat.gateway). */
 export function registerJobsSocketHandlers(socket: Socket, userId: string, role: string): void {
-  void socket.join(`user:${userId}`);
+  void socket.join(userRoom(userId));
+
+  const artisanId = socket.data.artisanId as string | undefined;
+  if (role === "ARTISAN" && artisanId) {
+    void socket.join(artisanRoom(artisanId));
+  }
+
+  socket.on("jobs:join", (payload: { artisanId?: string }) => {
+    if (role !== "ARTISAN") return;
+    const id = payload.artisanId ?? artisanId;
+    if (id) void socket.join(artisanRoom(id));
+  });
 
   socket.on("jobs:subscribe", (payload: { city?: string; categoryIds?: string[] }) => {
     if (role !== "ARTISAN") return;

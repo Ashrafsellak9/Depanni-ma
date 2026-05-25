@@ -1,3 +1,5 @@
+import type { CitizenMission } from "@/src/types/mission";
+
 export type JobStatus =
   | "PENDING"
   | "ACTIVE"
@@ -48,7 +50,7 @@ export interface CitizenJob {
   createdAt: string;
   updatedAt: string;
   offers?: CitizenOffer[];
-  mission?: unknown | null;
+  mission?: CitizenMission | null;
 }
 
 export interface OfferSocketPayload {

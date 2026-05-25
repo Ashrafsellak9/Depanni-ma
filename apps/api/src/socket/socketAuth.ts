@@ -35,3 +35,7 @@ export function missionRoom(missionId: string): string {
 export function userRoom(userId: string): string {
   return `user:${userId}`;
 }
+
+export function artisanRoom(artisanId: string): string {
+  return `artisan:${artisanId}`;
+}

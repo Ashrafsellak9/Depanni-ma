@@ -56,6 +56,27 @@ export async function rejectOffer(jobId: string, offerId: string): Promise<unkno
   return unwrapApi(res);
 }
 
+export async function completeMission(jobId: string, offerId: string): Promise<unknown> {
+  const res = await api.post(`/jobs/${jobId}/offers/${offerId}/complete`);
+  return unwrapApi(res);
+}
+
+export async function submitReview(payload: {
+  missionId: string;
+  rating: number;
+  comment?: string;
+  criteria: {
+    punctuality: number;
+    quality: number;
+    cleanliness: number;
+    communication: number;
+    price: number;
+  };
+}): Promise<unknown> {
+  const res = await api.post("/reviews", payload);
+  return unwrapApi(res);
+}
+
 export async function listOffers(jobId: string): Promise<CitizenOffer[]> {
   const res = await api.get(`/jobs/${jobId}/offers`);
   return unwrapApi<CitizenOffer[]>(res);

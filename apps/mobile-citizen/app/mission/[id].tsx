@@ -7,6 +7,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { MissionHeader } from "@/src/components/mission/MissionHeader";
 import { OffersBottomSheet } from "@/src/components/mission/OffersBottomSheet";
 import { SearchingBanner } from "@/src/components/mission/SearchingBanner";
+import { TrackingScreen } from "@/src/components/tracking/TrackingScreen";
 import { useJobOffersSocket } from "@/src/hooks/useJobOffersSocket";
 import { useMissionDetail } from "@/src/hooks/useMissionDetail";
 
@@ -17,13 +18,23 @@ export default function MissionDetailScreen(): ReactElement {
   const { data: job, isLoading, isError } = useMissionDetail(id ?? "");
   useJobOffersSocket(id);
 
+  const mission = job?.mission;
+  const acceptedOffer = useMemo(() => {
+    const fromOffers = job?.offers?.find((o) => o.status === "ACCEPTED");
+    return fromOffers ?? mission?.offer ?? null;
+  }, [job?.offers, mission?.offer]);
+
+  const showTracking = Boolean(
+    mission && acceptedOffer && (job?.status === "IN_PROGRESS" || job?.status === "ACTIVE"),
+  );
+
   const showSearching = useMemo(() => {
     if (!job || !isSearching) return false;
     const pending = (job.offers ?? []).filter((o) => o.status === "PENDING");
     return job.status === "PENDING" && pending.length === 0;
   }, [job, isSearching]);
 
-  const showOffers = job?.status === "PENDING" || job?.status === "ACTIVE";
+  const showOffers = job?.status === "PENDING";
 
   if (isLoading) {
     return (
@@ -38,6 +49,18 @@ export default function MissionDetailScreen(): ReactElement {
       <View style={styles.center}>
         <Text style={styles.error}>Mission introuvable</Text>
       </View>
+    );
+  }
+
+  if (showTracking && mission && acceptedOffer) {
+    return (
+      <TrackingScreen
+        jobId={job.id}
+        jobLat={job.lat}
+        jobLng={job.lng}
+        mission={mission}
+        offerId={acceptedOffer.id}
+      />
     );
   }
 
@@ -58,9 +81,7 @@ export default function MissionDetailScreen(): ReactElement {
         >
           <Marker coordinate={{ latitude: job.lat, longitude: job.lng }} title="Intervention" />
         </MapView>
-        {showOffers && (
-          <OffersBottomSheet jobId={job.id} offers={job.offers ?? []} />
-        )}
+        {showOffers && <OffersBottomSheet jobId={job.id} offers={job.offers ?? []} />}
       </View>
     </GestureHandlerRootView>
   );

@@ -40,7 +40,16 @@ const jobInclude = {
   mission: {
     include: {
       offer: true,
-      artisan: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+      artisan: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatar: true,
+          rating: true,
+          user: { select: { phone: true } },
+        },
+      },
     },
   },
 };

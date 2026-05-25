@@ -45,7 +45,15 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="mission/[id]"
-          options={{ headerShown: true, title: "Mission" }}
+          options={{ headerShown: false, title: "Mission" }}
+        />
+        <Stack.Screen
+          name="mission/[id]/chat"
+          options={{ headerShown: true, title: "Chat" }}
+        />
+        <Stack.Screen
+          name="mission/[id]/review"
+          options={{ headerShown: true, title: "Notation" }}
         />
         <Stack.Screen
           name="artisan/[id]"
