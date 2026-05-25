@@ -1,8 +1,18 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "../../config/db.js";
 import { extractS3Key, getSignedPrivateUrl } from "../../config/s3.js";
 import { NotFoundError } from "../../utils/errors.js";
+import { enqueueEmail } from "../../jobs/emailQueue.js";
 import { refreshArtisanMetrics } from "../artisans/artisans.score.js";
-import { rejectKycSchema } from "../artisans/artisans.schemas.js";
+import { getTargetAuditLog, logAdminAction } from "./admin.audit.js";
+import type { ArtisansListQuery } from "./admin.schemas.js";
+import {
+  artisanActionSchema,
+  adminMessageSchema,
+  rejectKycAdminSchema,
+  upgradeSubscriptionAdminSchema,
+} from "./admin.schemas.js";
 
 export class AdminService {
   async getDashboardStats() {
@@ -250,44 +260,300 @@ export class AdminService {
     return mission;
   }
 
-  async listArtisans(query: { kyc?: string; page?: number; limit?: number }) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+  async listArtisans(query: ArtisansListQuery) {
+    const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
-    const where = query.kyc ? { kycStatus: query.kyc as never } : {};
+    const where: Prisma.ArtisanWhereInput = {};
 
-    const [items, total] = await Promise.all([
+    if (query.kyc) where.kycStatus = query.kyc;
+    if (query.specialty) where.specialties = { has: query.specialty };
+    if (query.subscription) where.subscriptionTier = query.subscription;
+    if (query.ratingMin != null) where.rating = { gte: query.ratingMin };
+    if (query.city) {
+      where.OR = [
+        { zones: { has: query.city } },
+        { missions: { some: { job: { city: { contains: query.city, mode: "insensitive" } } } } },
+      ];
+    }
+    if (query.accountStatus) {
+      where.user = { accountStatus: query.accountStatus };
+    }
+    if (query.search?.trim()) {
+      const q = query.search.trim();
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        {
+          OR: [
+            { firstName: { contains: q, mode: "insensitive" } },
+            { lastName: { contains: q, mode: "insensitive" } },
+            { user: { email: { contains: q, mode: "insensitive" } } },
+            { user: { phone: { contains: q } } },
+            { specialties: { hasSome: [q] } },
+          ],
+        },
+      ];
+    }
+
+    const orderBy: Prisma.ArtisanOrderByWithRelationInput =
+      sortBy === "firstName"
+        ? { firstName: sortOrder }
+        : sortBy === "rating"
+          ? { rating: sortOrder }
+          : sortBy === "totalMissions"
+            ? { totalMissions: sortOrder }
+            : { createdAt: sortOrder };
+
+    const [rawItems, total] = await Promise.all([
       prisma.artisan.findMany({
         where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: { user: { select: { email: true, phone: true, isVerified: true } } },
+        include: {
+          user: {
+            select: {
+              email: true,
+              phone: true,
+              isVerified: true,
+              accountStatus: true,
+              createdAt: true,
+            },
+          },
+          missions: {
+            where: {
+              status: "COMPLETED",
+              completedAt: { gte: startOfMonth },
+            },
+            select: { artisanNet: true },
+          },
+        },
       }),
       prisma.artisan.count({ where }),
     ]);
 
-    return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    let items = rawItems.map((a) => ({
+      id: a.id,
+      firstName: a.firstName,
+      lastName: a.lastName,
+      avatar: a.avatar,
+      specialties: a.specialties,
+      kycStatus: a.kycStatus,
+      rating: a.rating,
+      totalMissions: a.totalMissions,
+      subscriptionTier: a.subscriptionTier,
+      availabilityStatus: a.availabilityStatus,
+      zones: a.zones,
+      monthRevenue: a.missions.reduce((s, m) => s + m.artisanNet, 0),
+      user: a.user,
+      createdAt: a.createdAt,
+    }));
+
+    if (sortBy === "monthRevenue") {
+      items = items.sort((a, b) =>
+        sortOrder === "asc" ? a.monthRevenue - b.monthRevenue : b.monthRevenue - a.monthRevenue,
+      );
+    } else {
+      items = items.sort((a, b) => {
+        const dir = sortOrder === "asc" ? 1 : -1;
+        if (sortBy === "rating") return (a.rating - b.rating) * dir;
+        if (sortBy === "totalMissions") return (a.totalMissions - b.totalMissions) * dir;
+        if (sortBy === "firstName") return a.firstName.localeCompare(b.firstName) * dir;
+        return (a.createdAt.getTime() - b.createdAt.getTime()) * dir;
+      });
+    }
+
+    const paged = items.slice(skip, skip + limit);
+
+    return { items: paged, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
   async getArtisan(id: string) {
     const artisan = await prisma.artisan.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, email: true, phone: true, createdAt: true } },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            createdAt: true,
+            accountStatus: true,
+            isVerified: true,
+          },
+        },
+        wallet: { select: { balance: true } },
         missions: {
-          take: 20,
           orderBy: { createdAt: "desc" },
-          include: { job: { select: { title: true, status: true, city: true } } },
+          take: 50,
+          include: {
+            job: { select: { title: true, status: true, city: true, photos: true } },
+            payments: { select: { id: true, amount: true, status: true } },
+          },
+        },
+        walletTx: { orderBy: { createdAt: "desc" }, take: 30 },
+        payments: {
+          where: { status: { in: ["DISPUTED", "FROZEN"] } },
+          take: 10,
         },
       },
     });
     if (!artisan) throw new NotFoundError("Artisan");
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const monthRevenue = await prisma.mission.aggregate({
+      where: {
+        artisanId: id,
+        status: "COMPLETED",
+        completedAt: { gte: startOfMonth },
+      },
+      _sum: { artisanNet: true },
+    });
+
+    const auditLog = await getTargetAuditLog("ARTISAN", id, 80);
+    const adminMessages = auditLog.filter((l) => l.action === "ADMIN_MESSAGE");
+
     return {
       ...artisan,
+      monthRevenue: monthRevenue._sum.artisanNet ?? 0,
       kycDocuments: await this.signedKycUrls(artisan.kycDocUrls),
+      auditLog,
+      adminMessages,
     };
+  }
+
+  async getKycStats() {
+    const [pending, reviewed, approved, rejected] = await Promise.all([
+      prisma.artisan.count({ where: { kycStatus: "PENDING" } }),
+      prisma.artisan.findMany({
+        where: { kycReviewedAt: { not: null } },
+        select: { kycStatus: true, createdAt: true, kycReviewedAt: true },
+      }),
+      prisma.artisan.count({ where: { kycStatus: "APPROVED", kycReviewedAt: { not: null } } }),
+      prisma.artisan.count({ where: { kycStatus: "REJECTED", kycReviewedAt: { not: null } } }),
+    ]);
+
+    const processingHours = reviewed
+      .filter((r) => r.kycReviewedAt)
+      .map((r) => (r.kycReviewedAt!.getTime() - r.createdAt.getTime()) / 3_600_000);
+    const avgProcessingHours =
+      processingHours.length > 0
+        ? Math.round(processingHours.reduce((a, b) => a + b, 0) / processingHours.length)
+        : 0;
+
+    const totalReviewed = approved + rejected;
+    const approvalRate = totalReviewed > 0 ? Math.round((approved / totalReviewed) * 100) : 0;
+
+    return {
+      pending,
+      avgProcessingHours,
+      approvalRate,
+      approved,
+      rejected,
+    };
+  }
+
+  async suspendArtisan(artisanId: string, adminId: string, input: unknown) {
+    artisanActionSchema.parse(input);
+    const artisan = await prisma.artisan.findUnique({
+      where: { id: artisanId },
+      include: { user: true },
+    });
+    if (!artisan) throw new NotFoundError("Artisan");
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: artisan.userId },
+        data: { accountStatus: "SUSPENDED" },
+      }),
+      prisma.artisan.update({
+        where: { id: artisanId },
+        data: { availabilityStatus: "OFFLINE" },
+      }),
+    ]);
+
+    await logAdminAction(adminId, "ARTISAN", artisanId, "SUSPEND", { note: (input as { note?: string }).note });
+    return { ok: true };
+  }
+
+  async banArtisan(artisanId: string, adminId: string, input: unknown) {
+    artisanActionSchema.parse(input);
+    const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
+    if (!artisan) throw new NotFoundError("Artisan");
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: artisan.userId },
+        data: { accountStatus: "BANNED" },
+      }),
+      prisma.artisan.update({
+        where: { id: artisanId },
+        data: { availabilityStatus: "OFFLINE", kycStatus: "REJECTED" },
+      }),
+    ]);
+
+    await logAdminAction(adminId, "ARTISAN", artisanId, "BAN", { note: (input as { note?: string }).note });
+    return { ok: true };
+  }
+
+  async reactivateArtisan(artisanId: string, adminId: string) {
+    const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
+    if (!artisan) throw new NotFoundError("Artisan");
+
+    await prisma.user.update({
+      where: { id: artisan.userId },
+      data: { accountStatus: "ACTIVE" },
+    });
+    await logAdminAction(adminId, "ARTISAN", artisanId, "REACTIVATE", {});
+    return { ok: true };
+  }
+
+  async upgradeArtisanSubscription(artisanId: string, adminId: string, input: unknown) {
+    const { tier } = upgradeSubscriptionAdminSchema.parse(input);
+    const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
+    if (!artisan) throw new NotFoundError("Artisan");
+
+    const updated = await prisma.artisan.update({
+      where: { id: artisanId },
+      data: { subscriptionTier: tier },
+    });
+
+    await logAdminAction(adminId, "ARTISAN", artisanId, "SUBSCRIPTION_UPGRADE", { tier });
+    return updated;
+  }
+
+  async resetArtisanRating(artisanId: string, adminId: string) {
+    const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
+    if (!artisan) throw new NotFoundError("Artisan");
+
+    await prisma.artisan.update({
+      where: { id: artisanId },
+      data: { rating: 0, badgeTop: false },
+    });
+    await refreshArtisanMetrics(artisanId);
+    await logAdminAction(adminId, "ARTISAN", artisanId, "RATING_RESET", {});
+    return { ok: true };
+  }
+
+  async sendArtisanMessage(artisanId: string, adminId: string, input: unknown) {
+    const { content } = adminMessageSchema.parse(input);
+    const artisan = await prisma.artisan.findUnique({
+      where: { id: artisanId },
+      include: { user: true },
+    });
+    if (!artisan) throw new NotFoundError("Artisan");
+
+    await logAdminAction(adminId, "ARTISAN", artisanId, "ADMIN_MESSAGE", { content });
+
+    await enqueueEmail({
+      to: artisan.user.email,
+      subject: "Message de l'équipe DEPANNI",
+      html: `<p>Bonjour ${artisan.firstName},</p><p>${content}</p><p>— Équipe DEPANNI</p>`,
+    });
+
+    return { ok: true, deliveredVia: ["audit", "email"] };
   }
 
   async listCitizens(page = 1, limit = 20) {
@@ -331,9 +597,9 @@ export class AdminService {
         where: { kycStatus: "PENDING" },
         skip,
         take: limit,
-        orderBy: { updatedAt: "desc" },
+        orderBy: { createdAt: "asc" },
         include: {
-          user: { select: { id: true, email: true, phone: true } },
+          user: { select: { id: true, email: true, phone: true, createdAt: true } },
         },
       }),
       prisma.artisan.count({ where: { kycStatus: "PENDING" } }),
@@ -346,11 +612,15 @@ export class AdminService {
       })),
     );
 
-    return { items: withSignedDocs, total, page, limit };
+    const stats = await this.getKycStats();
+    return { items: withSignedDocs, total, page, limit, stats };
   }
 
-  async approveKyc(artisanId: string) {
-    const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
+  async approveKyc(artisanId: string, adminId: string) {
+    const artisan = await prisma.artisan.findUnique({
+      where: { id: artisanId },
+      include: { user: true },
+    });
     if (!artisan) throw new NotFoundError("Artisan");
 
     const updated = await prisma.artisan.update({
@@ -358,38 +628,73 @@ export class AdminService {
       data: {
         kycStatus: "APPROVED",
         badgeVerified: true,
+        kycReviewedAt: new Date(),
+        kycRejectReason: null,
       },
     });
 
     await refreshArtisanMetrics(artisanId);
+    await logAdminAction(adminId, "ARTISAN", artisanId, "KYC_APPROVED", {});
+
+    await enqueueEmail({
+      to: artisan.user.email,
+      subject: "DEPANNI — KYC approuvé",
+      html: `<p>Bonjour ${artisan.firstName},</p><p>Votre dossier KYC a été <strong>approuvé</strong>. Vous pouvez recevoir des missions.</p>`,
+    });
+
     return updated;
   }
 
-  async rejectKyc(artisanId: string, input: unknown) {
-    const { reason } = rejectKycSchema.parse(input);
-    const artisan = await prisma.artisan.findUnique({ where: { id: artisanId } });
+  async rejectKyc(artisanId: string, adminId: string, input: unknown) {
+    const data = rejectKycAdminSchema.parse(input);
+    const fullReason = data.predefinedReason
+      ? `${data.predefinedReason}${data.reason ? ` — ${data.reason}` : ""}`
+      : data.reason;
+
+    const artisan = await prisma.artisan.findUnique({
+      where: { id: artisanId },
+      include: { user: true },
+    });
     if (!artisan) throw new NotFoundError("Artisan");
 
-    return prisma.artisan.update({
+    const updated = await prisma.artisan.update({
       where: { id: artisanId },
       data: {
         kycStatus: "REJECTED",
         badgeVerified: false,
         availabilityStatus: "OFFLINE",
-        bio: reason ? `${artisan.bio ?? ""}\n[KYC refusé: ${reason}]`.trim() : artisan.bio,
+        kycReviewedAt: new Date(),
+        kycRejectReason: fullReason,
       },
     });
+
+    await logAdminAction(adminId, "ARTISAN", artisanId, "KYC_REJECTED", {
+      reason: fullReason,
+      predefinedReason: data.predefinedReason,
+    });
+
+    if (data.sendEmail) {
+      await enqueueEmail({
+        to: artisan.user.email,
+        subject: "DEPANNI — Dossier KYC refusé",
+        html: `<p>Bonjour ${artisan.firstName},</p><p>Votre dossier KYC a été refusé.</p><p><strong>Motif :</strong> ${fullReason}</p><p>Vous pouvez soumettre un nouveau dossier depuis l'application.</p>`,
+      });
+    }
+
+    return updated;
   }
 
   private async signedKycUrls(urls: string[]) {
+    const labels = ["cin", "diploma", "doc_3", "doc_4"];
     const docs: Record<string, string> = {};
     for (let i = 0; i < urls.length; i++) {
       const value = urls[i];
       if (!value) continue;
+      const key = labels[i] ?? `doc_${i + 1}`;
       try {
-        docs[`doc_${i + 1}`] = await getSignedPrivateUrl(extractS3Key(value));
+        docs[key] = await getSignedPrivateUrl(extractS3Key(value));
       } catch {
-        docs[`doc_${i + 1}`] = value;
+        docs[key] = value;
       }
     }
     return docs;

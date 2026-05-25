@@ -32,7 +32,7 @@ export function KycQuickPanel({
   const onReject = handleSubmit(async ({ reason }) => {
     if (!rejectId) return;
     try {
-      await rejectKyc(rejectId, reason);
+      await rejectKyc(rejectId, { reason });
       toast.success("KYC refusé");
       setRejectId(null);
       reset();

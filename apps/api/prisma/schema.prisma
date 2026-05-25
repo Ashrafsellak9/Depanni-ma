@@ -20,6 +20,12 @@ enum UserRole {
   ADMIN
 }
 
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
 enum KycStatus {
   PENDING
   APPROVED
@@ -136,9 +142,10 @@ model User {
   phone        String    @unique
   email        String    @unique
   passwordHash String
-  role         UserRole  @default(CITIZEN)
-  isVerified   Boolean   @default(false)
-  locale       String    @default("fr")
+  role          UserRole      @default(CITIZEN)
+  accountStatus AccountStatus @default(ACTIVE)
+  isVerified    Boolean       @default(false)
+  locale        String        @default("fr")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -228,6 +235,8 @@ model Artisan {
   specialties        String[]           @default([])
   kycStatus          KycStatus          @default(PENDING)
   kycDocUrls         String[]           @default([])
+  kycReviewedAt      DateTime?
+  kycRejectReason    String?
   subscriptionTier   SubscriptionTier   @default(STANDARD)
   lat                Float?
   lng                Float?
@@ -392,6 +401,8 @@ model Payment {
   heldAt           DateTime?
   releasedAt       DateTime?
   refundedAt       DateTime?
+  disputeOpenedAt  DateTime?
+  disputeReason    String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -462,6 +473,21 @@ model Payout {
   @@index([status])
   @@index([batchId])
   @@map("payouts")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  targetType String
+  targetId   String
+  actorId    String
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }
 
 // ─── Chat & avis ─────────────────────────────────────────────────────────────
