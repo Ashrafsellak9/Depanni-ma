@@ -4,6 +4,8 @@ import { Inter } from "next/font/google";
 import "@depanni/ui/globals.css";
 import "./globals.css";
 
+import { QueryProvider } from "@/components/providers/QueryProvider";
+
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
@@ -11,15 +13,11 @@ export const metadata: Metadata = {
   description: "Tableau de bord administrateur DEPANNI.ma",
 };
 
-export default function AdminLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
       <body className={`${inter.variable} bg-gray-50 font-sans antialiased`}>
-        {children}
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
