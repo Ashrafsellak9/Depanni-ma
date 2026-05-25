@@ -42,7 +42,7 @@ export async function startAvailabilityTracking(
     },
   );
 
-  connectArtisanJobsSocket(artisanId, zones, specialties, onNewJob);
+  connectArtisanJobsSocket(artisanId, zones, specialties, onNewJob ?? undefined);
 }
 
 export async function stopAvailabilityTracking(): Promise<void> {

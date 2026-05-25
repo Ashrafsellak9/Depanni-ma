@@ -7,6 +7,7 @@ export const JOBS_REDIS_CHANNEL = "depanni:jobs:events";
 export type JobSocketEvent =
   | "job:new"
   | "job:offer:new"
+  | "job:offer:accepted"
   | "job:status"
   | "job:expired";
 

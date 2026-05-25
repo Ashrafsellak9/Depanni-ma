@@ -170,6 +170,29 @@ export class TrackingService {
     return { position, broadcasted: shouldBroadcast, arrived };
   }
 
+  /** Artisan confirme son arrivée sur place (bouton « Je suis arrivé »). */
+  async forceArrived(missionOrJobId: string, artisanUserId: string): Promise<MissionPosition> {
+    const access = await this.assertMissionTrackingAccess(missionOrJobId, artisanUserId, "ARTISAN");
+    if (access.artisanUserId !== artisanUserId) {
+      throw new ForbiddenError("Seul l'artisan assigné peut confirmer l'arrivée");
+    }
+
+    const position: MissionPosition = {
+      missionId: access.missionId,
+      artisanId: access.artisanId,
+      lat: access.job.lat,
+      lng: access.job.lng,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const redis = getRedis();
+    await redis.setex(this.missionKey(access.missionId), LOCATION_TTL_SECONDS, JSON.stringify(position));
+    await redis.setex(this.arrivedKey(access.missionId), LOCATION_TTL_SECONDS, "1");
+    await syncArtisanGeo(access.artisanId, access.job.lat, access.job.lng);
+
+    return position;
+  }
+
   async markTrackingStarted(missionOrJobId: string, artisanUserId: string): Promise<void> {
     const access = await this.assertMissionTrackingAccess(missionOrJobId, artisanUserId, "ARTISAN");
     await getRedis().setex(this.startedKey(access.missionId), LOCATION_TTL_SECONDS, "1");

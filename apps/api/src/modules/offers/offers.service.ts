@@ -222,6 +222,17 @@ export class OffersService {
         rooms: [citizenUserRoom(artisan.userId)],
         data: { jobId, missionId: result.mission.id, status: "ACTIVE" },
       });
+      await publishJobEvent({
+        event: "job:offer:accepted",
+        rooms: [citizenUserRoom(artisan.userId)],
+        data: {
+          jobId,
+          missionId: result.mission.id,
+          offerId: result.accepted.id,
+          artisanNet: result.mission.artisanNet,
+          totalAmount: result.mission.totalAmount,
+        },
+      });
     }
 
     return result;

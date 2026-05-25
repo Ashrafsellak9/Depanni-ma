@@ -13,6 +13,10 @@ import type { ArtisanProfile } from "@/src/types/artisan";
 export function useAvailability(profile: ArtisanProfile | undefined) {
   const qc = useQueryClient();
   const incrementNewJob = useJobsFeedStore((s) => s.incrementNewJob);
+
+  const onNewJob = (raw: Record<string, unknown>) => {
+    incrementNewJob(typeof raw.id === "string" ? raw.id : undefined);
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +37,7 @@ export function useAvailability(profile: ArtisanProfile | undefined) {
             profile.id,
             profile.zones.length ? profile.zones : ["Casablanca"],
             profile.specialties,
-            (job) => incrementNewJob(typeof job.id === "string" ? job.id : undefined),
+            onNewJob,
           );
         } else {
           await stopAvailabilityTracking();

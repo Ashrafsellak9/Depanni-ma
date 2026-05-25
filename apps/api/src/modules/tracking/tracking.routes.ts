@@ -12,6 +12,18 @@ trackingRoutes.get(
   "/missions/:missionId",
   asyncHandler(trackingController.getMissionTracking),
 );
+trackingRoutes.post(
+  "/missions/:missionId/position",
+  asyncHandler(trackingController.postPosition),
+);
+trackingRoutes.post(
+  "/missions/:missionId/arrived",
+  asyncHandler(trackingController.postArrived),
+);
+trackingRoutes.post(
+  "/missions/:missionId/start",
+  asyncHandler(trackingController.postStart),
+);
 
 // Rétrocompat
 trackingRoutes.put("/:artisanId/location", asyncHandler(trackingController.updateLocation));

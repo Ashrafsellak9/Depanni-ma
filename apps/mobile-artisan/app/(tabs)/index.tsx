@@ -85,7 +85,6 @@ export default function DashboardScreen(): ReactElement {
               mode="text"
               textColor="#fff"
               onPress={() => {
-                clearNewJobs();
                 router.push({ pathname: "/offer/[jobId]", params: { jobId: lastJobId } } as never);
               }}
             >

@@ -1,6 +1,8 @@
 import { Tabs } from "expo-router";
 import { Text, View, StyleSheet } from "react-native";
 
+import { useArtisanProfile } from "@/src/hooks/useArtisanProfile";
+import { useMissionAlerts } from "@/src/hooks/useMissionAlerts";
 import { useJobsFeedStore } from "@/src/store/jobsFeedStore";
 
 function TabBadge({ count }: { count: number }) {
@@ -13,6 +15,9 @@ function TabBadge({ count }: { count: number }) {
 }
 
 export default function TabsLayout() {
+  const { data: profile } = useArtisanProfile();
+  const isOnline = profile?.availabilityStatus === "ONLINE";
+  useMissionAlerts(Boolean(isOnline));
   const newJobsCount = useJobsFeedStore((s) => s.newJobsCount);
 
   return (

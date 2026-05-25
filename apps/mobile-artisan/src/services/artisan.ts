@@ -67,10 +67,11 @@ export async function fetchActiveJobs(lat: number, lng: number): Promise<ActiveJ
   return unwrapApi<ActiveJobFeed[]>(res);
 }
 
+/** @deprecated Utiliser submitJobOffer depuis services/jobs.ts */
 export async function submitOffer(
   jobId: string,
   body: { price: number; eta_minutes: number; message?: string },
 ): Promise<unknown> {
-  const res = await api.post("/offers", { jobId, ...body });
+  const res = await api.post(`/jobs/${jobId}/offers`, body);
   return unwrapApi(res);
 }

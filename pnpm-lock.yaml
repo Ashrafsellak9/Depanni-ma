@@ -268,9 +268,15 @@ importers:
       expo:
         specifier: ~50.0.21
         version: 50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
+      expo-av:
+        specifier: ~13.10.6
+        version: 13.10.6(expo@50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0))
       expo-constants:
         specifier: ~15.4.6
         version: 15.4.6(expo@50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0))
+      expo-haptics:
+        specifier: ~12.8.1
+        version: 12.8.1(expo@50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0))
       expo-image-picker:
         specifier: ~14.7.1
         version: 14.7.1(expo@50.0.21(@babel/core@7.29.0)(@react-native/babel-preset@0.73.21(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0)))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0))
@@ -298,6 +304,9 @@ importers:
       react-native:
         specifier: 0.73.6
         version: 0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0)
+      react-native-countdown-circle-timer:
+        specifier: ^3.2.1
+        version: 3.2.1(react-native-svg@15.15.5(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
       react-native-gesture-handler:
         specifier: ~2.14.0
         version: 2.14.1(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
@@ -316,6 +325,9 @@ importers:
       react-native-screens:
         specifier: ~3.29.0
         version: 3.29.0(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
+      react-native-svg:
+        specifier: ^15.15.5
+        version: 15.15.5(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
       socket.io-client:
         specifier: ^4.8.1
         version: 4.8.3
@@ -7754,6 +7766,13 @@ packages:
 
   react-is@19.2.6:
     resolution: {integrity: sha512-XjBR15BhXuylgWGuslhDKqlSayuqvqBX91BP8pauG8kd1zY8kotkNWbXksTCNRarse4kuGbe2kIY05ARtwNIvw==}
+
+  react-native-countdown-circle-timer@3.2.1:
+    resolution: {integrity: sha512-iHiOgipG0hMprerswqUCUfjGo9hL0UhKNS0BGh4o6yY9Lu7f3VXQ7EJt757Obwn74AiF5MOHURIdqldoGnVrDw==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-native: '>=0.50.0'
+      react-native-svg: '>=6.2.1'
 
   react-native-gesture-handler@2.14.1:
     resolution: {integrity: sha512-YiM1BApV4aKeuwsM6O4C2ufwewYEKk6VMXOt0YqEZFMwABBFWhXLySFZYjBSNRU2USGppJbfHP1q1DfFQpKhdA==}
@@ -17576,6 +17595,12 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.6: {}
+
+  react-native-countdown-circle-timer@3.2.1(react-native-svg@15.15.5(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0))(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0):
+    dependencies:
+      react: 18.2.0
+      react-native: 0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0)
+      react-native-svg: 15.15.5(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0)
 
   react-native-gesture-handler@2.14.1(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))(react@18.2.0):
     dependencies:
