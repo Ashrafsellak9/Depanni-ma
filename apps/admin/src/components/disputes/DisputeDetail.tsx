@@ -8,6 +8,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 import { formatMad } from "@/lib/utils";
+import { adminPaths } from "@/lib/adminPaths";
 import { fetchDispute, resolveDispute } from "@/services/adminApi";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -70,7 +71,7 @@ export function DisputeDetail({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <Link href="/finances/litiges" className="text-sm text-indigo-600 hover:underline">
+      <Link href={adminPaths.litiges()} className="text-sm font-medium text-orange hover:underline">
         ← Litiges
       </Link>
 
@@ -81,7 +82,7 @@ export function DisputeDetail({ id }: { id: string }) {
           <p className="mt-2 text-2xl font-bold">{formatMad(payment.amount)}</p>
           <StatusBadge status={payment.status} />
         </div>
-        <Link href={`/missions/${m.id}`} className="text-sm text-indigo-600 hover:underline">
+        <Link href={adminPaths.missions(m.id)} className="text-sm font-medium text-orange hover:underline">
           Voir la mission →
         </Link>
       </div>

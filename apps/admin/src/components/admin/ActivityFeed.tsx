@@ -1,0 +1,78 @@
+"use client";
+
+import Link from "next/link";
+import { motion } from "framer-motion";
+
+const ACTIVITIES = [
+  {
+    color: "#1B8A4E",
+    text: ["Khalid Amrani", " a terminé une mission plomberie · 255 MAD"],
+    time: "il y a 8 min",
+  },
+  {
+    color: "#F05A1A",
+    text: ["Nouvelle demande ", "serrurerie urgente", " — Youssef B."],
+    time: "il y a 14 min",
+  },
+  {
+    color: "#7C3AED",
+    text: ["Rachid El Filali", " s'est inscrit comme artisan (KYC en attente)"],
+    time: "il y a 32 min",
+  },
+  {
+    color: "#DC2626",
+    text: ["Litige ouvert — ", "Mission #1247", " · Client insatisfait"],
+    time: "il y a 1h",
+  },
+  {
+    color: "#1B8A4E",
+    text: ["Virement ", "Khalid Amrani", " — 2 840 MAD → CIH Bank"],
+    time: "il y a 2h",
+  },
+];
+
+export function ActivityFeed() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 }}
+      className="rounded-2xl border border-[#E5E0D8] bg-white p-5"
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-navy">Activité récente</h2>
+        <Link href="/admin/notifications" className="text-xs text-[#6B7280] hover:text-[#F05A1A]">
+          Tout voir
+        </Link>
+      </div>
+
+      {ACTIVITIES.length === 0 ? (
+        <p className="py-6 text-center text-sm text-[#6B7280]">Aucune donnée</p>
+      ) : (
+        <ul>
+          {ACTIVITIES.map((item, i) => (
+            <li
+              key={i}
+              className="flex gap-2.5 border-b border-[#E5E0D8] py-2.5 last:border-0"
+            >
+              <span
+                className="mt-[5px] h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: item.color }}
+              />
+              <p className="flex-1 text-[12px] leading-[1.5] text-[#0F1E35]">
+                {item.text.map((part, idx) => (
+                  <span key={idx} className={idx % 2 === 0 ? "font-semibold" : undefined}>
+                    {part}
+                  </span>
+                ))}
+              </p>
+              <span className="shrink-0 whitespace-nowrap text-[10px] text-[#6B7280]">
+                {item.time}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </motion.div>
+  );
+}

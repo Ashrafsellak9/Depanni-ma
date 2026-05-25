@@ -1,0 +1,10 @@
+export { Navbar } from "./Navbar";
+export { HeroSection } from "./HeroSection";
+export { StatsBar } from "./StatsBar";
+export { ServicesSection } from "./ServicesSection";
+export { HowItWorksSection } from "./HowItWorksSection";
+export { ArtisanSection } from "./ArtisanSection";
+export { TestimonialsSection } from "./TestimonialsSection";
+export { CtaSection } from "./CtaSection";
+export { Footer } from "./Footer";
+export { PhoneMockup } from "./PhoneMockup";

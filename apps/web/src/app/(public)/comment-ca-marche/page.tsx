@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { PublicPageShell } from "@/components/landing/PublicPageShell";
+
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
@@ -31,6 +33,7 @@ const steps = [
 
 export default function CommentCaMarchePage() {
   return (
+    <PublicPageShell>
     <div className="container mx-auto max-w-3xl px-4 py-16">
       <h1 className="text-3xl font-bold text-navy">Comment ça marche</h1>
       <p className="mt-4 text-muted-foreground">
@@ -51,5 +54,6 @@ export default function CommentCaMarchePage() {
         ))}
       </ol>
     </div>
+    </PublicPageShell>
   );
 }

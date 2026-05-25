@@ -1,10 +1,5 @@
-"use client";
+import { redirectToAdmin } from "@/lib/legacyRedirects";
 
-import { useParams } from "next/navigation";
-
-import { DisputeDetail } from "@/components/disputes/DisputeDetail";
-
-export default function LitigeDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  return <DisputeDetail id={id} />;
+export default function LegacyLitigeDetailRedirect({ params }: { params: { id: string } }) {
+  redirectToAdmin(`/admin/litiges/${params.id}`);
 }

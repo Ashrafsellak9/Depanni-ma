@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { useState } from "react";
+
+import { adminPaths } from "@/lib/adminPaths";
 import toast from "react-hot-toast";
 
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -78,7 +80,7 @@ export function ArtisanDetailView({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <Link href="/artisans" className="text-sm text-indigo-600 hover:underline">
+      <Link href={adminPaths.artisans()} className="text-sm font-medium text-orange hover:underline">
         ← Artisans
       </Link>
 
@@ -199,7 +201,7 @@ export function ArtisanDetailView({ id }: { id: string }) {
           {data.missions.map((m) => (
             <li key={m.id} className="flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm">
               <div>
-                <Link href={`/missions/${m.id}`} className="font-medium text-indigo-600 hover:underline">
+                <Link href={adminPaths.missions(m.id)} className="font-medium text-orange hover:underline">
                   {m.job.title}
                 </Link>
                 <span className="ml-2 text-slate-400">
@@ -247,7 +249,7 @@ export function ArtisanDetailView({ id }: { id: string }) {
           ) : (
             data.payments.map((p) => (
               <li key={p.id}>
-                <Link href={`/finances/litiges/${p.id}`} className="text-indigo-600 hover:underline">
+                <Link href={adminPaths.litiges(p.id)} className="text-orange hover:underline">
                   Paiement {p.id.slice(0, 8)}… — {formatMad(p.amount)} — {p.status}
                 </Link>
               </li>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import { formatMad } from "@/lib/utils";
+import { adminPaths } from "@/lib/adminPaths";
 import { fetchDisputes } from "@/services/adminApi";
 import type { DisputeListItem } from "@/types/moderation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -51,7 +52,7 @@ export function DisputesList() {
                   </span>
                 </td>
                 <td className="px-4 py-2">
-                  <Link href={`/finances/litiges/${d.id}`} className="font-medium text-indigo-600 hover:underline">
+                  <Link href={adminPaths.litiges(d.id)} className="font-medium text-orange hover:underline">
                     {d.job.title}
                   </Link>
                   <p className="text-xs text-slate-400">{d.job.city}</p>

@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { exportRowsToCsv } from "@/lib/exportCsv";
 import { formatMad } from "@/lib/utils";
+import { adminPaths } from "@/lib/adminPaths";
 import { fetchArtisans, type ArtisansListParams } from "@/services/adminApi";
 import type { ArtisanListItem } from "@/types/moderation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -101,7 +102,7 @@ export function ArtisansTable() {
         header: "Nom",
         accessorFn: (r) => `${r.firstName} ${r.lastName}`,
         cell: ({ row }) => (
-          <Link href={`/artisans/${row.original.id}`} className="font-medium text-indigo-600 hover:underline">
+          <Link href={adminPaths.artisans(row.original.id)} className="font-medium text-orange hover:underline">
             {row.original.firstName} {row.original.lastName}
           </Link>
         ),
@@ -139,13 +140,13 @@ export function ArtisansTable() {
         cell: ({ row }) => (
           <div className="flex gap-2">
             <Link
-              href={`/artisans/${row.original.id}`}
+              href={adminPaths.artisans(row.original.id)}
               className="rounded border px-2 py-0.5 text-xs hover:bg-slate-50"
             >
               Voir
             </Link>
             {row.original.kycStatus === "PENDING" && (
-              <Link href="/artisans/kyc" className="text-xs text-amber-600 hover:underline">
+              <Link href={adminPaths.kyc} className="text-xs text-orange hover:underline">
                 KYC
               </Link>
             )}

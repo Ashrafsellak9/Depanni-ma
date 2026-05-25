@@ -3,9 +3,14 @@ import type { UserRole } from "@/types";
 export const AUTH_ROUTES = {
   login: "/login",
   register: "/register",
+  /** Citoyen — publier une demande d'artisan */
+  newRequest: "/request/new",
+  citizenRegister: "/register/citizen",
   citizenDashboard: "/dashboard",
-  artisanDashboard: "/artisan/dashboard",
-  adminDashboard: "/admin/dashboard",
+  artisanRegister: "/artisan/register",
+  artisanLogin: "/artisan/login",
+  artisanDashboard: "/artisan",
+  adminDashboard: "/admin",
 } as const;
 
 export function getDashboardForRole(role: UserRole): string {
