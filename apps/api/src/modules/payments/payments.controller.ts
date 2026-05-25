@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { getParam } from "../../utils/params.js";
 import { sendCreated, sendSuccess } from "../../utils/response.js";
+import { artisansService } from "../artisans/artisans.service.js";
 import { paymentsAdminService } from "./payments.admin.service.js";
 import { paymentsService } from "./payments.service.js";
 import { walletService } from "./payments.wallet.js";
@@ -51,6 +52,11 @@ export class PaymentsController {
     }
     const balance = await walletService.getBalance(artisanId);
     sendSuccess(res, balance);
+  };
+
+  walletPayout = async (req: Request, res: Response): Promise<void> => {
+    const payout = await artisansService.requestPayout(req.user!.id, req.body);
+    sendCreated(res, payout);
   };
 
   walletTransactions = async (req: Request, res: Response): Promise<void> => {

@@ -22,6 +22,7 @@ artisansRoutes.get("/me/earnings", asyncHandler(artisansController.getEarnings))
 artisansRoutes.get("/me/missions", asyncHandler(artisansController.listMissions));
 artisansRoutes.get("/me/missions/:missionId", asyncHandler(artisansController.getMission));
 artisansRoutes.post("/me/payout-request", asyncHandler(artisansController.requestPayout));
+artisansRoutes.post("/me/subscription/upgrade", asyncHandler(artisansController.upgradeSubscription));
 artisansRoutes.post(
   "/me/kyc",
   artisanKycUpload,

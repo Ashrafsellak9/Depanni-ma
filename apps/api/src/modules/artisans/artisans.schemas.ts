@@ -46,9 +46,19 @@ export const missionsQuerySchema = z.object({
 });
 
 export const payoutRequestSchema = z.object({
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().min(100, "Minimum 100 MAD"),
   bankName: z.string().min(2).max(100),
   iban: z.string().min(10).max(40),
+  securityPin: z.string().regex(/^\d{4,6}$/).optional(),
+});
+
+export const earningsQuerySchema = z.object({
+  days: z.coerce.number().int().refine((d) => [7, 30, 90].includes(d), "days must be 7, 30 or 90").default(30),
+});
+
+export const subscriptionUpgradeSchema = z.object({
+  tier: z.enum(["PREMIUM", "PRO"]),
+  method: z.enum(["WALLET", "CMI"]),
 });
 
 export type UpdateArtisanMeInput = z.infer<typeof updateArtisanMeSchema>;

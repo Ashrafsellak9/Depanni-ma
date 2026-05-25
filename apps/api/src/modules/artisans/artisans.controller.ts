@@ -26,7 +26,7 @@ export class ArtisansController {
   };
 
   getEarnings = async (req: Request, res: Response): Promise<void> => {
-    const earnings = await artisansService.getEarnings(req.user!.id);
+    const earnings = await artisansService.getEarnings(req.user!.id, req.query);
     sendSuccess(res, earnings);
   };
 
@@ -46,6 +46,11 @@ export class ArtisansController {
   requestPayout = async (req: Request, res: Response): Promise<void> => {
     const payout = await artisansService.requestPayout(req.user!.id, req.body);
     sendCreated(res, payout);
+  };
+
+  upgradeSubscription = async (req: Request, res: Response): Promise<void> => {
+    const result = await artisansService.upgradeSubscription(req.user!.id, req.body);
+    sendSuccess(res, result);
   };
 
   uploadKyc = async (req: Request, res: Response): Promise<void> => {

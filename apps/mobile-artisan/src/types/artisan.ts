@@ -3,6 +3,7 @@ import type { JobStatus, JobUrgency, MissionStatus, OfferStatus } from "@depanni
 export interface ArtisanProfile {
   id: string;
   userId: string;
+  subscriptionTier?: SubscriptionTier;
   firstName: string;
   lastName: string;
   avatar: string | null;
@@ -54,8 +55,20 @@ export interface ArtisanMission {
   offer: { id: string; price: number; etaMinutes: number | null; status: OfferStatus };
 }
 
+export type SubscriptionTier = "STANDARD" | "PREMIUM" | "PRO";
+
 export interface ArtisanEarnings {
   wallet: { balance: number; currency: string; walletId: string };
+  subscriptionTier?: SubscriptionTier;
+  payoutDelayHours?: number;
+  commissionRate?: number;
+  chartDays?: number;
+  monthStats?: {
+    gross: number;
+    commissions: number;
+    net: number;
+    missionsCount: number;
+  };
   summary: {
     balance: number;
     totalCredited: number;

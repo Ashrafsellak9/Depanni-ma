@@ -22,8 +22,8 @@ export async function postLocation(coords: { lat: number; lng: number }): Promis
   return unwrapApi(res);
 }
 
-export async function fetchEarnings(): Promise<ArtisanEarnings> {
-  const res = await api.get("/artisans/me/earnings");
+export async function fetchEarnings(days: 7 | 30 | 90 = 30): Promise<ArtisanEarnings> {
+  const res = await api.get("/artisans/me/earnings", { params: { days } });
   return unwrapApi<ArtisanEarnings>(res);
 }
 

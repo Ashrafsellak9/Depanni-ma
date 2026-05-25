@@ -7,16 +7,30 @@ import { ForbiddenError, NotFoundError } from "../../utils/errors.js";
 import { findNearbyArtisans, syncArtisanGeo, syncBaseLocationGeo } from "./artisans.geo.js";
 import { refreshArtisanMetrics } from "./artisans.score.js";
 import { walletService } from "../payments/payments.wallet.js";
+import { getCommissionRate } from "../payments/payments.commission.js";
 import {
   availabilitySchema,
+  earningsQuerySchema,
   locationSchema,
   missionsQuerySchema,
   nearbyQuerySchema,
   payoutRequestSchema,
+  subscriptionUpgradeSchema,
   updateArtisanMeSchema,
   type NearbyQueryInput,
   type UpdateArtisanMeInput,
 } from "./artisans.schemas.js";
+
+const SUBSCRIPTION_MONTHLY_MAD: Record<"PREMIUM" | "PRO", number> = {
+  PREMIUM: 199,
+  PRO: 399,
+};
+
+const PAYOUT_DELAY_HOURS: Record<string, number> = {
+  STANDARD: 72,
+  PREMIUM: 24,
+  PRO: 24,
+};
 
 export class ArtisansService {
   async getArtisanByUserId(userId: string) {
@@ -121,16 +135,19 @@ export class ArtisansService {
     });
   }
 
-  async getEarnings(userId: string) {
+  async getEarnings(userId: string, query: unknown = {}) {
     const artisan = await this.getArtisanByUserId(userId);
+    const { days: chartDays } = earningsQuerySchema.parse(query);
+
     const now = new Date();
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const chartStart = new Date(now);
-    chartStart.setDate(chartStart.getDate() - 29);
+    chartStart.setDate(chartStart.getDate() - (chartDays - 1));
     chartStart.setHours(0, 0, 0, 0);
 
-    const [transactions, payouts, wallet, todayTx, chartTx, todayMissions] =
+    const [transactions, payouts, wallet, todayTx, chartTx, todayMissions, monthMissions, monthTx] =
       await Promise.all([
         prisma.walletTransaction.findMany({
           where: { artisanId: artisan.id },
@@ -164,6 +181,16 @@ export class ArtisansService {
             createdAt: { gte: startOfDay },
           },
         }),
+        prisma.mission.count({
+          where: {
+            artisanId: artisan.id,
+            status: "COMPLETED",
+            completedAt: { gte: startOfMonth },
+          },
+        }),
+        prisma.walletTransaction.findMany({
+          where: { artisanId: artisan.id, createdAt: { gte: startOfMonth } },
+        }),
       ]);
 
     const credits = transactions
@@ -176,8 +203,16 @@ export class ArtisansService {
 
     const revenueToday = todayTx.reduce((s, t) => s + t.amount, 0);
 
+    const monthGross = monthTx
+      .filter((t) => t.amount > 0 && t.type === "CREDIT")
+      .reduce((s, t) => s + t.amount, 0);
+    const monthCommissions = monthTx
+      .filter((t) => t.type === "COMMISSION" || t.amount < 0)
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+    const monthNet = Math.round((monthGross - monthCommissions) * 100) / 100;
+
     const byDay = new Map<string, number>();
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < chartDays; i++) {
       const d = new Date(chartStart);
       d.setDate(d.getDate() + i);
       byDay.set(d.toISOString().slice(0, 10), 0);
@@ -191,8 +226,20 @@ export class ArtisansService {
       amount: Math.round(amount * 100) / 100,
     }));
 
+    const tier = artisan.subscriptionTier;
+    const commissionRate = getCommissionRate(tier);
+
     return {
       wallet,
+      subscriptionTier: tier,
+      payoutDelayHours: PAYOUT_DELAY_HOURS[tier] ?? 72,
+      commissionRate,
+      monthStats: {
+        gross: monthGross,
+        commissions: monthCommissions,
+        net: monthNet,
+        missionsCount: monthMissions,
+      },
       summary: {
         balance: wallet.balance,
         totalCredited: credits,
@@ -203,9 +250,56 @@ export class ArtisansService {
         rating: artisan.rating,
       },
       chart,
+      chartDays,
       transactions,
       payouts,
     };
+  }
+
+  async upgradeSubscription(userId: string, input: unknown) {
+    const data = subscriptionUpgradeSchema.parse(input);
+    const artisan = await this.getArtisanByUserId(userId);
+    const tierOrder = ["STANDARD", "PREMIUM", "PRO"] as const;
+    if (tierOrder.indexOf(data.tier) <= tierOrder.indexOf(artisan.subscriptionTier)) {
+      throw new ForbiddenError("Abonnement déjà actif ou supérieur");
+    }
+
+    const price = SUBSCRIPTION_MONTHLY_MAD[data.tier];
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    if (data.method === "WALLET") {
+      await walletService.debit(artisan.id, price, "DEBIT", {
+        description: `Abonnement ${data.tier}`,
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.artisan.update({
+        where: { id: artisan.id },
+        data: { subscriptionTier: data.tier },
+      }),
+      prisma.artisanSubscription.create({
+        data: {
+          artisanId: artisan.id,
+          tier: data.tier,
+          price,
+          expiresAt,
+          isActive: true,
+        },
+      }),
+    ]);
+
+    if (data.method === "CMI") {
+      return {
+        tier: data.tier,
+        method: "CMI",
+        price,
+        message: "Redirection CMI à configurer — utilisez le wallet en attendant",
+      };
+    }
+
+    return this.getMe(userId);
   }
 
   async listMissions(userId: string, query: unknown) {
@@ -315,13 +409,19 @@ export class ArtisansService {
       throw new ForbiddenError("Une demande de virement est déjà en cours");
     }
 
+    const tier = artisan.subscriptionTier;
     return prisma.payout.create({
       data: {
         artisanId: artisan.id,
         amount: data.amount,
         status: "PENDING",
         reference: data.iban,
-        bankDetails: { bankName: data.bankName, iban: data.iban },
+        bankDetails: {
+          bankName: data.bankName,
+          iban: data.iban,
+          estimatedHours: PAYOUT_DELAY_HOURS[tier] ?? 72,
+          pinVerified: Boolean(data.securityPin),
+        },
         initiatedBy: userId,
       },
     });

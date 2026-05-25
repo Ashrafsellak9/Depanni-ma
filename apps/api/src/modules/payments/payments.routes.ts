@@ -20,6 +20,7 @@ walletRoutes.get(
   asyncHandler(paymentsController.walletBalance),
 );
 walletRoutes.get("/transactions", asyncHandler(paymentsController.walletTransactions));
+walletRoutes.post("/payout", authorize("ARTISAN"), asyncHandler(paymentsController.walletPayout));
 
 export const paymentsAdminRoutes: IRouter = Router();
 paymentsAdminRoutes.use(authenticate, authorize("ADMIN"));
