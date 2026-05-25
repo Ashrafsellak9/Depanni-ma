@@ -202,6 +202,12 @@ async function main(): Promise<void> {
     console.log("  ✓ Artisan:", a.email, `(${a.tier})`);
   }
 
+  await prisma.$executeRaw`
+    UPDATE artisans
+    SET location = ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
+    WHERE lat IS NOT NULL AND lng IS NOT NULL
+  `;
+
   console.log("\n✅ Seed terminé.");
   console.log("   Admin     : admin@depanni.ma / Depanni@2026!");
   console.log("   Citoyens  : fatima@, youssef@, sara@example.ma");

@@ -302,6 +302,9 @@ importers:
       '@react-native-async-storage/async-storage':
         specifier: 1.21.0
         version: 1.21.0(react-native@0.73.6(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(react@18.2.0))
+      '@react-native-community/slider':
+        specifier: 4.4.2
+        version: 4.4.2
       '@tanstack/react-query':
         specifier: ^5.62.8
         version: 5.100.14(react@18.2.0)
@@ -380,6 +383,9 @@ importers:
       socket.io-client:
         specifier: ^4.8.1
         version: 4.8.3
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
       zustand:
         specifier: ^5.0.2
         version: 5.0.13(@types/react@18.2.79)(react@18.2.0)(use-sync-external-store@1.6.0(react@18.2.0))
@@ -2988,6 +2994,9 @@ packages:
     resolution: {integrity: sha512-647OSi6xBb8FbwFqX9zsJxOzu685AWtrOUWHfOkbKD+5LOpGORw+GQo0F9rWZnB68rLQyfKUZWJeaD00pGv5fw==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@react-native-community/slider@4.4.2':
+    resolution: {integrity: sha512-D9bv+3Vd2gairAhnRPAghwccgEmoM7g562pm8i4qB3Esrms5mggF81G3UvCyc0w3jjtFHh8dpQkfEoKiP0NW/Q==}
 
   '@react-native/assets-registry@0.73.1':
     resolution: {integrity: sha512-2FgAbU7uKM5SbbW9QptPPZx8N9Ke2L7bsHb+EhAanZjFZunA9PaYtyjUQ1s7HD+zDVqOQIvjkpXSv7Kejd2tqg==}
@@ -11998,6 +12007,8 @@ snapshots:
       - encoding
       - supports-color
       - utf-8-validate
+
+  '@react-native-community/slider@4.4.2': {}
 
   '@react-native/assets-registry@0.73.1': {}
 

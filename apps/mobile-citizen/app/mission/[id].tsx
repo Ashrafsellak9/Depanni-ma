@@ -1,38 +1,39 @@
-import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-import { ActivityIndicator } from "react-native-paper";
+import { useMemo, type ReactElement } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
-import { api, unwrapApi } from "@/src/lib/api";
+import { MissionHeader } from "@/src/components/mission/MissionHeader";
+import { OffersBottomSheet } from "@/src/components/mission/OffersBottomSheet";
+import { SearchingBanner } from "@/src/components/mission/SearchingBanner";
+import { useJobOffersSocket } from "@/src/hooks/useJobOffersSocket";
+import { useMissionDetail } from "@/src/hooks/useMissionDetail";
 
-interface JobDetail {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-}
+export default function MissionDetailScreen(): ReactElement {
+  const { id, searching } = useLocalSearchParams<{ id: string; searching?: string }>();
+  const isSearching = searching === "1" || searching === "true";
 
-export default function MissionDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { data: job, isLoading, isError } = useMissionDetail(id ?? "");
+  useJobOffersSocket(id);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["mission", id],
-    enabled: Boolean(id),
-    queryFn: async () => {
-      const res = await api.get(`/jobs/${id}`);
-      return unwrapApi<JobDetail>(res);
-    },
-  });
+  const showSearching = useMemo(() => {
+    if (!job || !isSearching) return false;
+    const pending = (job.offers ?? []).filter((o) => o.status === "PENDING");
+    return job.status === "PENDING" && pending.length === 0;
+  }, [job, isSearching]);
+
+  const showOffers = job?.status === "PENDING" || job?.status === "ACTIVE";
 
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator size="large" color="#16a34a" />
       </View>
     );
   }
 
-  if (error || !data) {
+  if (isError || !job) {
     return (
       <View style={styles.center}>
         <Text style={styles.error}>Mission introuvable</Text>
@@ -41,23 +42,33 @@ export default function MissionDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{data.title}</Text>
-      <Text style={styles.status}>Statut : {data.status}</Text>
-      <Text style={styles.description}>{data.description}</Text>
-      <Text style={styles.hint}>
-        Suivi GPS temps réel et offres artisans — prochaine itération (socket + carte).
-      </Text>
-    </View>
+    <GestureHandlerRootView style={styles.flex}>
+      <View style={styles.flex}>
+        {showSearching && <SearchingBanner />}
+        <MissionHeader job={job} />
+        <MapView
+          style={styles.map}
+          provider={PROVIDER_GOOGLE}
+          region={{
+            latitude: job.lat,
+            longitude: job.lng,
+            latitudeDelta: 0.03,
+            longitudeDelta: 0.03,
+          }}
+        >
+          <Marker coordinate={{ latitude: job.lat, longitude: job.lng }} title="Intervention" />
+        </MapView>
+        {showOffers && (
+          <OffersBottomSheet jobId={job.id} offers={job.offers ?? []} />
+        )}
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f8fafc" },
+  flex: { flex: 1, backgroundColor: "#f8fafc" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 22, fontWeight: "700", color: "#14532d" },
-  status: { marginTop: 8, color: "#16a34a", fontWeight: "600" },
-  description: { marginTop: 16, color: "#334155", lineHeight: 22 },
-  hint: { marginTop: 24, color: "#94a3b8", fontSize: 13 },
-  error: { color: "#dc2626" },
+  map: { flex: 1 },
+  error: { color: "#dc2626", fontSize: 16 },
 });

@@ -231,7 +231,7 @@ model Artisan {
   subscriptionTier   SubscriptionTier   @default(STANDARD)
   lat                Float?
   lng                Float?
-  // Colonne SQL `location geography(Point,4326)` + GIST — voir migration & seed
+  /// Colonne SQL `location geography(Point,4326)` + index GIST `artisans_location_gix` (migration 20260525140000)
   rating             Float              @default(0)
   totalMissions      Int                @default(0)
   badgeVerified      Boolean            @default(false)

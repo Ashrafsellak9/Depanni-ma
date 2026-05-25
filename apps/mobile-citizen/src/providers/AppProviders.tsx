@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
@@ -29,7 +30,9 @@ export function AppProviders({ children }: AppProvidersProps) {
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <PaperProvider theme={theme}>
-          <NotificationProvider>{children}</NotificationProvider>
+          <BottomSheetModalProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </BottomSheetModalProvider>
         </PaperProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
