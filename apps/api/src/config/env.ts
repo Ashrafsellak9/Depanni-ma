@@ -3,6 +3,13 @@ import { z } from "zod";
 
 config();
 
+/** `.env` often sets `KEY=` — Zod `.optional()` only skips `undefined`, not `""`. */
+function emptyToUndefined(val: unknown): unknown {
+  if (typeof val !== "string") return val;
+  const trimmed = val.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   API_PORT: z.coerce.number().int().positive().default(4000),
@@ -14,7 +21,7 @@ const envSchema = z.object({
   /** Prisma pool size (appended to DATABASE_URL as connection_limit). */
   DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(50).default(10),
 
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.preprocess(emptyToUndefined, z.string().url().optional()),
 
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
@@ -81,7 +88,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(["error", "warn", "info", "http", "debug"]).default("info"),
 
   /** Email comptable — rapport mensuel automatique le 1er du mois */
-  ACCOUNTING_EMAIL: z.string().email().optional(),
+  ACCOUNTING_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

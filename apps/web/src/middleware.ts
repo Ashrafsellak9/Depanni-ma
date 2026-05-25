@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { AUTH_ROUTES, getDashboardForRole } from "@/lib/auth";
+import { handleArtisanAuth } from "@/lib/artisanMiddleware";
 import type { UserRole } from "@/types";
 
-const publicPaths = ["/", "/comment-ca-marche", "/login", "/register"];
+const publicPaths = ["/", "/comment-ca-marche", "/prix", "/login", "/register"];
 
 const citizenPaths = ["/dashboard", "/missions", "/profile", "/request"];
-
-const artisanPaths = ["/artisan/dashboard", "/artisan/missions", "/artisan/earnings", "/artisan/profile"];
 
 const legacyCitizenRedirects: Record<string, string> = {
   "/citizen/dashboard": "/dashboard",
@@ -29,8 +28,8 @@ function isCitizenArea(pathname: string): boolean {
   return citizenPaths.some((p) => matchPrefix(pathname, p));
 }
 
-function isArtisanArea(pathname: string): boolean {
-  return artisanPaths.some((p) => matchPrefix(pathname, p));
+function isArtisanAppRoute(pathname: string): boolean {
+  return pathname === "/artisan" || pathname.startsWith("/artisan/");
 }
 
 export default auth((req) => {
@@ -39,6 +38,13 @@ export default auth((req) => {
   const role = session?.user?.role as UserRole | undefined;
 
   if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  // Artisan space: cookie auth (independent of NextAuth)
+  if (isArtisanAppRoute(pathname)) {
+    const artisanResult = handleArtisanAuth(req);
+    if (artisanResult) return artisanResult;
     return NextResponse.next();
   }
 
@@ -73,16 +79,8 @@ export default auth((req) => {
     return NextResponse.redirect(new URL(getDashboardForRole(role ?? "ARTISAN"), req.url));
   }
 
-  if (isArtisanArea(pathname) && role !== "ARTISAN" && role !== "ADMIN") {
-    return NextResponse.redirect(new URL(getDashboardForRole(role ?? "CITIZEN"), req.url));
-  }
-
   if (matchPrefix(pathname, "/citizen") && role !== "CITIZEN" && role !== "ADMIN") {
     return NextResponse.redirect(new URL(getDashboardForRole(role ?? "ARTISAN"), req.url));
-  }
-
-  if (matchPrefix(pathname, "/artisan") && role !== "ARTISAN" && role !== "ADMIN") {
-    return NextResponse.redirect(new URL(getDashboardForRole(role ?? "CITIZEN"), req.url));
   }
 
   if (matchPrefix(pathname, "/admin") && role !== "ADMIN") {

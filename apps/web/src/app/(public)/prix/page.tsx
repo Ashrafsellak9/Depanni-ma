@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { PublicPageShell } from "@/components/landing/PublicPageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AUTH_ROUTES } from "@/lib/auth";
@@ -19,6 +20,7 @@ const PLANS = [
 
 export default function PrixPage() {
   return (
+    <PublicPageShell>
     <div className="container mx-auto px-4 py-16">
       <h1 className="text-3xl font-bold text-navy">Tarifs transparents</h1>
       <p className="mt-4 max-w-2xl text-muted-foreground">
@@ -38,8 +40,9 @@ export default function PrixPage() {
         ))}
       </div>
       <Button className="mt-10" asChild>
-        <Link href={AUTH_ROUTES.register}>Créer un compte</Link>
+        <Link href={AUTH_ROUTES.newRequest}>Créer un compte</Link>
       </Button>
     </div>
+    </PublicPageShell>
   );
 }

@@ -1,121 +1,178 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { ChevronRight, Search } from "lucide-react";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Download } from "lucide-react";
 
-import { MissionStatusBadge } from "@/components/artisan/MissionStatusBadge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useArtisanMissions } from "@/hooks/artisan/useArtisanMissions";
-import type { MissionStatus } from "@/types";
+import {
+  PendingMissionCard,
+  type PendingMission,
+} from "@/components/artisan/PendingMissionCard";
 
-const STATUS_OPTIONS: { value: MissionStatus | ""; label: string }[] = [
-  { value: "", label: "Tous" },
-  { value: "ACCEPTED", label: "Acceptées" },
-  { value: "IN_PROGRESS", label: "En cours" },
-  { value: "COMPLETED", label: "Terminées" },
-  { value: "CANCELLED", label: "Annulées" },
+const PENDING: PendingMission[] = [
+  {
+    id: "M-1090",
+    type: "🔧",
+    service: "Plomberie",
+    subtype: "Fuite d'eau",
+    distance: "1.2 km",
+    eta: "8 min",
+    budget: "100–200 MAD",
+    urgency: "urgent",
+    client: { name: "Mohammed O.", rating: "Bon client", missions: 3 },
+    description: "Fuite importante sous le lavabo cuisine depuis ce matin.",
+    expiresIn: 87,
+  },
+  {
+    id: "M-1089",
+    type: "⚡",
+    service: "Électricité",
+    subtype: "Panne courant",
+    distance: "2.1 km",
+    eta: "15 min",
+    budget: "150–250 MAD",
+    urgency: "normal",
+    client: { name: "Fatima Z.", rating: "Excellente cliente", missions: 8 },
+    description: "Panne totale dans l'appartement depuis hier soir.",
+    expiresIn: 234,
+  },
 ];
 
+const COMPLETED = [
+  { service: "Fuite robinet", client: "Fatima Z.", date: "27 Avr", brut: 255, net: 216 },
+  { service: "Chauffe-eau", client: "Youssef B.", date: "26 Avr", brut: 425, net: 361 },
+  { service: "Tableau élec.", client: "Hassan A.", date: "25 Avr", brut: 180, net: 153 },
+  { service: "Canalisation", client: "Nadia M.", date: "24 Avr", brut: 320, net: 272 },
+];
+
+const TABS = [
+  { id: "pending", label: "En attente", count: 2 },
+  { id: "active", label: "En cours", count: 1 },
+  { id: "done", label: "Terminées", count: null },
+  { id: "all", label: "Toutes", count: null },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
 export default function ArtisanMissionsPage() {
-  const [status, setStatus] = useState<MissionStatus | "">("");
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  const { data, isLoading, isError } = useArtisanMissions({
-    status: status || undefined,
-    search: debouncedSearch || undefined,
-    limit: 50,
-  });
+  const [tab, setTab] = useState<TabId>("pending");
+  const totalEarned = COMPLETED.reduce((s, m) => s + m.net, 0);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-navy">Missions</h1>
-        <p className="text-muted-foreground">Historique et missions en cours</p>
-      </div>
-
-      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:flex-row sm:items-end">
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="search">Recherche</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="search"
-              className="pl-9"
-              placeholder="Titre, ville…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="w-full space-y-2 sm:w-48">
-          <Label htmlFor="status">Statut</Label>
-          <select
-            id="status"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as MissionStatus | "")}
+    <div>
+      <div className="mb-6 flex flex-wrap gap-2 border-b border-dep-border">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`border-b-2 px-4 py-2.5 text-[13px] font-semibold transition-colors ${
+              tab === t.id
+                ? "border-orange text-orange"
+                : "border-transparent text-dep-gray hover:text-navy"
+            }`}
           >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value || "all"} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            {t.label}
+            {t.count != null && (
+              <span className="ml-1.5 rounded-full bg-orange/10 px-1.5 text-[11px] text-orange">
+                {t.count}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+      {tab === "pending" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-4"
+        >
+          {PENDING.map((m) => (
+            <PendingMissionCard key={m.id} mission={m} />
           ))}
+        </motion.div>
+      )}
+
+      {tab === "active" && (
+        <div className="rounded-2xl border border-dep-border bg-white p-8 text-center">
+          <p className="text-[14px] font-semibold text-navy">1 mission en cours</p>
+          <p className="mt-1 text-[13px] text-dep-gray">
+            Fuite eau — Mohammed O. · Demain 17h00
+          </p>
         </div>
       )}
 
-      {isError && (
-        <p className="text-sm text-danger">Impossible de charger les missions.</p>
-      )}
+      {(tab === "done" || tab === "all") && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] text-dep-gray">Total gagné (période)</p>
+              <p className="font-syne text-2xl font-bold text-navy">
+                {totalEarned.toLocaleString("fr-FR")} MAD
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <select className="h-10 rounded-xl border border-dep-border bg-white px-3 text-sm">
+                <option>Ce mois</option>
+                <option>Cette semaine</option>
+                <option>3 derniers mois</option>
+              </select>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-dep-border bg-white px-4 text-sm font-medium text-navy hover:bg-cream"
+              >
+                <Download className="h-4 w-4" />
+                Exporter
+              </button>
+            </div>
+          </div>
 
-      {!isLoading && (data?.items.length ?? 0) === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">Aucune mission.</p>
+          <div className="overflow-hidden rounded-2xl border border-dep-border bg-white">
+            <table className="w-full border-collapse text-[13px]">
+              <thead>
+                <tr>
+                  {["Service", "Client", "Date", "Brut", "Net"].map((h) => (
+                    <th
+                      key={h}
+                      className="border-b border-dep-border px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-dep-gray"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPLETED.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-dep-gray">
+                      Aucune donnée
+                    </td>
+                  </tr>
+                ) : (
+                  COMPLETED.map((m) => (
+                    <tr key={m.service + m.date} className="hover:bg-cream">
+                      <td className="border-b border-dep-border/50 px-4 py-3 font-medium text-navy">
+                        {m.service}
+                      </td>
+                      <td className="border-b border-dep-border/50 px-4 py-3">{m.client}</td>
+                      <td className="border-b border-dep-border/50 px-4 py-3 text-dep-gray">
+                        {m.date}
+                      </td>
+                      <td className="border-b border-dep-border/50 px-4 py-3">
+                        {m.brut.toLocaleString("fr-FR")} MAD
+                      </td>
+                      <td className="border-b border-dep-border/50 px-4 py-3 font-semibold text-green">
+                        {m.net.toLocaleString("fr-FR")} MAD
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
       )}
-
-      <ul className="space-y-2">
-        {data?.items.map((m) => (
-          <li key={m.id}>
-            <Link
-              href={`/artisan/missions/${m.id}`}
-              className="flex items-center justify-between rounded-xl border p-4 transition-shadow hover:shadow-md"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-navy truncate">{m.job.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {m.citizen.firstName} {m.citizen.lastName} · {m.job.city} ·{" "}
-                  {format(new Date(m.createdAt), "d MMM yyyy", { locale: fr })}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <MissionStatusBadge status={m.status} />
-                <span className="hidden font-semibold text-primary sm:inline">
-                  {m.artisanNet} MAD
-                </span>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

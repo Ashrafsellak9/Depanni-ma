@@ -3,10 +3,7 @@ import tailwindAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
-  content: [
-    "./src/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+  content: ["./src/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -15,27 +12,44 @@ const config: Config = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "#E8622A",
-          hover: "#D4521F",
-          foreground: "#FFFFFF",
-        },
         navy: {
-          DEFAULT: "#1E3A5F",
+          DEFAULT: "#0F1E35",
+          "2": "#1A2E4A",
           light: "#2A4F82",
           foreground: "#FFFFFF",
         },
+        orange: {
+          DEFAULT: "#F05A1A",
+          "2": "#FF7A3D",
+        },
+        cream: {
+          DEFAULT: "#FAF7F2",
+          "2": "#F0EBE1",
+        },
+        "dep-gray": "#6B7280",
+        "dep-border": "#E5E0D8",
+        page: "#EDE8DF",
+        "dep-red": "#DC2626",
+        green: {
+          DEFAULT: "#1B8A4E",
+          foreground: "#FFFFFF",
+        },
+        primary: {
+          DEFAULT: "#F05A1A",
+          hover: "#FF7A3D",
+          foreground: "#FFFFFF",
+        },
         success: {
-          DEFAULT: "#2E7D32",
+          DEFAULT: "#1B8A4E",
           foreground: "#FFFFFF",
         },
         danger: {
           DEFAULT: "#C62828",
           foreground: "#FFFFFF",
         },
-        surface: "#FFF5F0",
+        surface: "#FAF7F2",
         muted: {
-          DEFAULT: "#F5F5F5",
+          DEFAULT: "#F0EBE1",
           foreground: "#6B7280",
         },
         secondary: {
@@ -60,7 +74,13 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-cairo)", "var(--font-inter)", "system-ui", "sans-serif"],
+        syne: ["var(--font-syne)", "Syne", "sans-serif"],
+        dm: ["var(--font-dm)", "DM Sans", "sans-serif"],
+        sans: ["var(--font-dm)", "DM Sans", "system-ui", "sans-serif"],
+      },
+      letterSpacing: {
+        tight2: "-0.125rem",
+        tight3: "-0.15rem",
       },
       borderRadius: {
         lg: "var(--radius)",
