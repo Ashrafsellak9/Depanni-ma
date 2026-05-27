@@ -3,6 +3,8 @@
 import { Status, Wrapper } from "@googlemaps/react-wrapper";
 import { useEffect, useRef } from "react";
 
+import { buildCircleHeatmap, clearCircleHeatmap } from "@/lib/circleHeatmap";
+import { getGoogleMapsApiKey } from "@/lib/mapsConfig";
 import type { HeatmapPoint } from "@/types/admin";
 
 const EL_JADIDA = { lat: 33.2316, lng: -8.5007 };
@@ -10,7 +12,7 @@ const EL_JADIDA = { lat: 33.2316, lng: -8.5007 };
 function HeatmapMap({ points }: { points: HeatmapPoint[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
-  const layerRef = useRef<google.maps.visualization.HeatmapLayer | null>(null);
+  const circlesRef = useRef<google.maps.Circle[]>([]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -23,38 +25,28 @@ function HeatmapMap({ points }: { points: HeatmapPoint[] }) {
 
   useEffect(() => {
     const map = mapInstance.current;
-    if (!map || !window.google?.maps?.visualization) return;
+    if (!map) return;
 
-    const data = points.map(
-      (p) =>
-        ({
-          location: new google.maps.LatLng(p.lat, p.lng),
-          weight: p.weight ?? 1,
-        }) as google.maps.visualization.WeightedLocation,
-    );
+    clearCircleHeatmap(circlesRef.current);
+    circlesRef.current = buildCircleHeatmap(map, points, {
+      fillColor: "#F05A1A",
+      baseRadiusMeters: 700,
+      maxOpacity: 0.28,
+    });
 
-    if (!layerRef.current) {
-      layerRef.current = new google.maps.visualization.HeatmapLayer({
-        map,
-        data,
-        radius: 28,
-        opacity: 0.65,
-      });
-    } else {
-      layerRef.current.setData(data);
-    }
+    return () => clearCircleHeatmap(circlesRef.current);
   }, [points]);
 
   return <div ref={mapRef} className="h-full min-h-[280px] w-full rounded-lg" />;
 }
 
 export function ActivityHeatmap({ points }: { points: HeatmapPoint[] }) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  const apiKey = getGoogleMapsApiKey();
 
   if (!apiKey) {
     return (
       <div className="flex h-72 items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-500">
-        Configurez NEXT_PUBLIC_GOOGLE_MAPS_API_KEY pour la carte
+        Configurez GOOGLE_MAPS_API_KEY ou NEXT_PUBLIC_GOOGLE_MAPS_API_KEY dans le .env racine
       </div>
     );
   }
@@ -62,7 +54,6 @@ export function ActivityHeatmap({ points }: { points: HeatmapPoint[] }) {
   return (
     <Wrapper
       apiKey={apiKey}
-      libraries={["visualization"]}
       render={(status) => {
         if (status === Status.LOADING) {
           return <div className="flex h-72 items-center justify-center text-slate-400">Chargement…</div>;

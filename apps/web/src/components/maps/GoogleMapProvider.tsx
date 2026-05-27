@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { getGoogleMapsApiKey } from "@/lib/mapsConfig";
+
 interface GoogleMapsContextValue {
   isReady: boolean;
   loadError: boolean;
@@ -27,7 +29,7 @@ function buildMapsScriptUrl(apiKey: string, libraries: string[]): string {
 }
 
 export function GoogleMapProvider({ children }: { children: ReactNode }) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  const apiKey = getGoogleMapsApiKey();
   const [isReady, setIsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -63,7 +65,7 @@ export function GoogleMapProvider({ children }: { children: ReactNode }) {
     <GoogleMapsContext.Provider value={value}>
       <Script
         id="depanni-google-maps"
-        src={buildMapsScriptUrl(apiKey, ["places", "visualization", "geometry"])}
+        src={buildMapsScriptUrl(apiKey, ["places", "geometry"])}
         strategy="afterInteractive"
         onError={() => setLoadError(true)}
       />
@@ -95,7 +97,7 @@ export function MapStatus({
     return (
       error ?? (
         <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed p-4 text-sm text-danger">
-          Carte indisponible — vérifiez NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+          Carte indisponible — configurez GOOGLE_MAPS_API_KEY dans le .env racine
         </div>
       )
     );

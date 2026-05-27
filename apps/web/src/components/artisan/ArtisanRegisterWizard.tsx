@@ -21,7 +21,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ServiceZoneMap } from "@/components/maps/ServiceZoneMap";
 import { artisanAuth } from "@/lib/artisanAuth";
+import { DEFAULT_MAP_CENTER } from "@/lib/mapsConfig";
 import { useArtisanAuthStore } from "@/store/artisanAuthStore";
 
 const STEPS = [
@@ -71,6 +73,10 @@ export function ArtisanRegisterWizard() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [radiusKm, setRadiusKm] = useState(5);
   const [experience, setExperience] = useState("2-5 ans");
+  const [zoneCenter, setZoneCenter] = useState<{ lat: number; lng: number }>({
+    lat: DEFAULT_MAP_CENTER.lat,
+    lng: DEFAULT_MAP_CENTER.lng,
+  });
 
   const [uploaded, setUploaded] = useState<Record<string, boolean>>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -369,6 +375,11 @@ export function ArtisanRegisterWizard() {
                 />
                 <p className="mt-1 text-[12px] text-dep-gray">Je couvre un rayon de {radiusKm} km</p>
               </div>
+              <ServiceZoneMap
+                center={zoneCenter}
+                radiusKm={radiusKm}
+                onCenterChange={(lat, lng) => setZoneCenter({ lat, lng })}
+              />
               <div>
                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.4px] text-navy">
                   Années d&apos;expérience

@@ -5,6 +5,7 @@ export { TrackingMap } from "./TrackingMap";
 export { LocationPicker } from "./LocationPicker";
 export { HeatmapLayer } from "./HeatmapLayer";
 export type { HeatmapPoint } from "./HeatmapLayer";
+export { ServiceZoneMap } from "./ServiceZoneMap";
 export {
   buildArtisanInfoHtml,
   createArtisanCategoryIcon,
