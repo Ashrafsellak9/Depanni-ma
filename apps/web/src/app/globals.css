@@ -60,3 +60,13 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+@layer components {
+  .field-label {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.4px] text-navy;
+  }
+
+  .field-input {
+    @apply w-full rounded-xl border border-dep-border bg-cream px-3.5 py-2.5 font-dm text-[13px] text-navy outline-none transition-all focus:border-navy focus:bg-white focus:ring-2 focus:ring-navy/5;
+  }
+}

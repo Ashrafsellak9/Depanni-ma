@@ -18,22 +18,23 @@ export function PhoneMockup() {
         <motion.div
           animate={{ y: [0, -6, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-4 z-20 min-w-[160px] max-w-[180px] rounded-2xl border border-dep-border bg-white px-4 py-3 shadow-xl"
+          className="absolute top-4 z-20 w-[188px] rounded-2xl border border-dep-border bg-white px-4 py-3 shadow-xl"
           style={{ right: -60 }}
         >
-          <p className="text-xs font-medium text-dep-gray">Artisans disponibles</p>
-          <p className="whitespace-nowrap font-syne text-[20px] font-extrabold leading-tight text-navy">
-            24 près de vous
+          <p className="text-xs font-medium leading-snug text-dep-gray">Artisans disponibles</p>
+          <p className="mt-0.5 font-syne text-[22px] font-extrabold leading-[1.15] tracking-tight text-navy">
+            <span className="text-orange">24</span>
+            <span className="block text-[15px] font-extrabold text-navy">près de vous</span>
           </p>
         </motion.div>
 
         <motion.div
           animate={{ y: [0, 6, 0] }}
           transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-          className="absolute bottom-[60px] z-20 whitespace-nowrap rounded-2xl border border-dep-border bg-white px-4 py-3 shadow-xl"
+          className="absolute bottom-[60px] z-20 max-w-[220px] rounded-2xl border border-dep-border bg-white px-4 py-3 shadow-xl"
           style={{ left: -70 }}
         >
-          <p className="flex items-center gap-2 text-sm font-medium text-navy">
+          <p className="flex items-start gap-2 text-[13px] font-medium leading-snug text-navy">
             <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green" />

@@ -4,8 +4,10 @@ import { motion, useInView } from "framer-motion";
 import {
   Banknote,
   ClipboardList,
+  Clock,
   HardHat,
   Star,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -19,6 +21,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Banknote,
   HardHat,
   Star,
+  Zap,
+  Clock,
 };
 
 const ICON_BG: Record<IconBg, string> = {
