@@ -7,6 +7,6 @@ export default function Index() {
   const isLoading = useAuthStore((s) => s.isLoading);
 
   if (isLoading) return null;
-  if (isAuthenticated) return <Redirect href={"/(tabs)" as never} />;
+  if (isAuthenticated) return <Redirect href={"/(app)/(tabs)" as never} />;
   return <Redirect href={"/(auth)/login" as never} />;
 }

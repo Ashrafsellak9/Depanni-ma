@@ -34,7 +34,10 @@ export function MissionAlertModal({ job, visible, onDismiss }: MissionAlertModal
         return;
       }
       onDismiss();
-      router.push({ pathname: "/offer/[jobId]", params: { jobId: job.id } } as never);
+      router.push({
+        pathname: "/(app)/offer/[jobId]",
+        params: { jobId: job.id },
+      } as never);
     } catch {
       onDismiss();
     }

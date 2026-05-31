@@ -52,7 +52,7 @@ export default function ArtisanMissionDetailScreen() {
       void qc.invalidateQueries({ queryKey: ["artisan-earnings"] });
       const net = result.mission?.artisanNet ?? mission?.offer.price ?? 0;
       router.replace({
-        pathname: "/mission/[id]/recap",
+        pathname: "/(app)/mission/[id]/recap",
         params: {
           id: mission!.id,
           netAmount: String(net),
@@ -163,7 +163,7 @@ export default function ArtisanMissionDetailScreen() {
           mode="text"
           onPress={() =>
             router.push({
-              pathname: "/mission/[id]/chat",
+              pathname: "/(app)/mission/[id]/chat",
               params: { id: mission.id, missionId: mission.id },
             } as never)
           }

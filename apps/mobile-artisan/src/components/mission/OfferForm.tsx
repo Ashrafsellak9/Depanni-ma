@@ -79,7 +79,7 @@ export function OfferForm({ jobId, initialJob }: OfferFormProps) {
         eta_minutes: Math.round(etaMinutes),
         message: message.trim() || undefined,
       }),
-    onSuccess: () => router.replace("/(tabs)/missions" as never),
+    onSuccess: () => router.replace("/(app)/(tabs)/missions" as never),
     onError: (e) => setError(getApiErrorMessage(e)),
   });
 

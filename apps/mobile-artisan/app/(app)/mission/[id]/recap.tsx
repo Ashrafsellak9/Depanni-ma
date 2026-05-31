@@ -25,7 +25,7 @@ export default function MissionRecapScreen() {
         mode="contained"
         buttonColor="#15803d"
         style={styles.btn}
-        onPress={() => router.replace("/(tabs)" as never)}
+        onPress={() => router.replace("/(app)/(tabs)" as never)}
       >
         Retour à l&apos;accueil
       </Button>

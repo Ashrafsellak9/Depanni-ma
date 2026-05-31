@@ -36,7 +36,7 @@ export default function LoginScreen(): ReactElement {
       } else {
         await login({ email: email.trim(), password });
       }
-      router.replace("/(tabs)" as never);
+      router.replace("/(app)/(tabs)" as never);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -95,6 +95,14 @@ export default function LoginScreen(): ReactElement {
       <Button mode="contained" onPress={() => void onSubmit()} loading={loading} style={styles.submit}>
         Connexion
       </Button>
+
+      <Button
+        mode="text"
+        onPress={() => router.push("/(auth)/register" as never)}
+        style={styles.registerLink}
+      >
+        Pas encore de compte ? S&apos;inscrire
+      </Button>
     </KeyboardAvoidingView>
   );
 }
@@ -107,4 +115,5 @@ const styles = StyleSheet.create({
   input: { marginBottom: 12, backgroundColor: "#fff" },
   error: { color: "#dc2626", marginBottom: 8 },
   submit: { marginTop: 8 },
+  registerLink: { marginTop: 8 },
 });

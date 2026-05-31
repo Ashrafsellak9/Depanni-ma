@@ -10,9 +10,14 @@ interface AuthState {
   user: AuthUserView | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  pendingPhone: string | null;
+  otpPurpose: "REGISTER" | "RESET" | "VERIFY_PHONE";
   hydrate: () => Promise<void>;
   applySession: (session: AuthSession) => Promise<void>;
   login: (payload: authService.LoginPayload) => Promise<void>;
+  register: (payload: authService.RegisterArtisanPayload) => Promise<void>;
+  verifyOtp: (code: string, purpose?: AuthState["otpPurpose"]) => Promise<void>;
+  resendOtp: () => Promise<void>;
   refresh: () => Promise<string>;
   logout: () => Promise<void>;
 }
@@ -26,13 +31,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  pendingPhone: null,
+  otpPurpose: "REGISTER",
 
   applySession: async (session) => {
     if (session.user.role !== "ARTISAN") {
       throw new Error("Compte citoyen — utilisez l'app DEPANNI Citoyen");
     }
     await persistSession(session);
-    set({ user: session.user, isAuthenticated: true });
+    set({ user: session.user, isAuthenticated: true, pendingPhone: null });
   },
 
   hydrate: async () => {
@@ -72,6 +79,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await get().applySession(session);
   },
 
+  register: async (payload) => {
+    const result = await authService.registerArtisan(payload);
+    set({ pendingPhone: result.phone, otpPurpose: "REGISTER" });
+  },
+
+  verifyOtp: async (code, purpose) => {
+    const phone = get().pendingPhone;
+    if (!phone) {
+      throw new Error("Numéro manquant. Recommencez l'inscription.");
+    }
+    const session = await authService.verifyOtp({
+      phone,
+      code,
+      purpose: purpose ?? get().otpPurpose,
+    });
+    await get().applySession(session);
+  },
+
+  resendOtp: async () => {
+    const phone = get().pendingPhone;
+    if (!phone) throw new Error("Numéro manquant");
+    await authService.resendOtp({ phone, purpose: get().otpPurpose });
+  },
+
   logout: async () => {
     try {
       const refreshToken = await getRefreshToken();
@@ -81,7 +112,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       await clearRefreshToken();
       clearAccessToken();
-      set({ user: null, isAuthenticated: false });
+      set({
+        user: null,
+        isAuthenticated: false,
+        pendingPhone: null,
+        otpPurpose: "REGISTER",
+      });
     }
   },
 }));

@@ -16,7 +16,7 @@ export function useProtectedRoute(): void {
     if (!isAuthenticated && !inAuth) {
       router.replace("/(auth)/login" as never);
     } else if (isAuthenticated && inAuth) {
-      router.replace("/(tabs)" as never);
+      router.replace("/(app)/(tabs)" as never);
     }
   }, [isAuthenticated, isLoading, segments, router]);
 }

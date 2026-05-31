@@ -80,7 +80,7 @@ export function useMissionAlerts(enabled: boolean) {
     });
 
     router.push({
-      pathname: "/mission/[id]",
+      pathname: "/(app)/mission/[id]",
       params: { id: data.missionId },
     } as never);
   };
@@ -113,10 +113,16 @@ export function useMissionAlerts(enabled: boolean) {
         missionId?: string;
       };
       if (data.type === "job:new" && data.jobId) {
-        router.push({ pathname: "/offer/[jobId]", params: { jobId: data.jobId } } as never);
+        router.push({
+          pathname: "/(app)/offer/[jobId]",
+          params: { jobId: data.jobId },
+        } as never);
       }
       if (data.type === "job:offer:accepted" && data.missionId) {
-        router.push({ pathname: "/mission/[id]", params: { id: data.missionId } } as never);
+        router.push({
+          pathname: "/(app)/mission/[id]",
+          params: { id: data.missionId },
+        } as never);
       }
     });
 

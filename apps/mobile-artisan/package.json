@@ -33,6 +33,7 @@
     "expo-router": "~3.4.10",
     "expo-secure-store": "~12.8.1",
     "expo-status-bar": "~1.11.1",
+    "formik": "^2.4.9",
     "react": "18.2.0",
     "react-native": "0.73.6",
     "react-native-chart-kit": "^6.12.2",
@@ -45,6 +46,7 @@
     "react-native-screens": "~3.29.0",
     "react-native-svg": "^15.15.5",
     "socket.io-client": "^4.8.1",
+    "yup": "^1.7.1",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
   },

@@ -4,9 +4,11 @@ import { API_URL } from "@/src/lib/config";
 import { getAccessToken } from "@/src/lib/session";
 
 let jobsSocket: Socket | null = null;
+let chatSocket: Socket | null = null;
 
-function createJobsSocket(): Socket {
-  return io(API_URL, {
+function createSocket(namespace: string): Socket {
+  const url = namespace ? `${API_URL}${namespace}` : API_URL;
+  return io(url, {
     path: "/socket.io",
     autoConnect: false,
     transports: ["websocket"],
@@ -17,8 +19,13 @@ function createJobsSocket(): Socket {
 }
 
 export function getJobsSocket(): Socket {
-  if (!jobsSocket) jobsSocket = createJobsSocket();
+  if (!jobsSocket) jobsSocket = createSocket("");
   return jobsSocket;
+}
+
+export function getChatSocket(): Socket {
+  if (!chatSocket) chatSocket = createSocket("/chat");
+  return chatSocket;
 }
 
 export function disconnectJobsSocket(): void {

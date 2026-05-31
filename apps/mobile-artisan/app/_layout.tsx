@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { LoadingScreen } from "@/src/components/LoadingScreen";
 import { setSessionExpiredHandler } from "@/src/lib/auth-events";
 import { useProtectedRoute } from "@/src/hooks/useProtectedRoute";
-import { MissionAlertHost } from "@/src/components/mission/MissionAlertModal";
 import { AppProviders } from "@/src/providers/AppProviders";
 import { useAuthStore } from "@/src/store/authStore";
 
@@ -35,13 +34,8 @@ function RootNavigator() {
       <StatusBar style="light" backgroundColor="#15803d" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="mission/[id]" options={{ headerShown: true, title: "Mission" }} />
-        <Stack.Screen name="offer/[jobId]" options={{ headerShown: true, title: "Soumettre une offre" }} />
-        <Stack.Screen name="mission/[id]/chat" options={{ headerShown: true, title: "Chat" }} />
-        <Stack.Screen name="mission/[id]/recap" options={{ headerShown: true, title: "Récapitulatif" }} />
+        <Stack.Screen name="(app)" />
       </Stack>
-      <MissionAlertHost />
     </>
   );
 }

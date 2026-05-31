@@ -23,7 +23,10 @@ export function MissionListItem({ mission }: MissionListItemProps) {
     <Pressable
       style={styles.card}
       onPress={() =>
-        router.push({ pathname: "/mission/[id]", params: { id: mission.id } } as never)
+        router.push({
+          pathname: "/(app)/mission/[id]",
+          params: { id: mission.id },
+        } as never)
       }
     >
       <View style={styles.row}>
@@ -40,7 +43,7 @@ export function MissionListItem({ mission }: MissionListItemProps) {
       <Text style={styles.price}>{mission.offer.price} MAD</Text>
     </Pressable>
   );
-});
+};
 
 const styles = StyleSheet.create({
   card: {

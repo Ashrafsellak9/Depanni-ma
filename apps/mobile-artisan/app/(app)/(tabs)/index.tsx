@@ -85,7 +85,10 @@ export default function DashboardScreen(): ReactElement {
               mode="text"
               textColor="#fff"
               onPress={() => {
-                router.push({ pathname: "/offer/[jobId]", params: { jobId: lastJobId } } as never);
+                router.push({
+                  pathname: "/(app)/offer/[jobId]",
+                  params: { jobId: lastJobId },
+                } as never);
               }}
             >
               Voir
@@ -111,7 +114,10 @@ export default function DashboardScreen(): ReactElement {
             />
             <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>Missions en cours</Text>
-              <Button compact onPress={() => router.push("/(tabs)/missions" as never)}>
+              <Button
+                compact
+                onPress={() => router.push("/(app)/(tabs)/missions" as never)}
+              >
                 Tout voir
               </Button>
             </View>

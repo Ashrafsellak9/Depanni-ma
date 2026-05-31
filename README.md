@@ -58,7 +58,7 @@ pnpm install
 
 # Variables d'environnement
 cp .env.example .env
-# Éditer .env avec vos clés
+# Guide détaillé variable par variable : voir ENV.md
 
 # Démarrer PostgreSQL + Redis + pgAdmin
 pnpm docker:up
