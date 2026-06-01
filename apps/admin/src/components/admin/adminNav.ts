@@ -47,7 +47,7 @@ export const ADMIN_NAV: NavSectionDef[] = [
   {
     title: "FINANCES",
     items: [
-      { href: "/admin/finances", label: "Revenus", icon: Wallet },
+      { href: "/admin/revenus", label: "Revenus", icon: Wallet },
       { href: "/admin/virements", label: "Virements", icon: Wallet },
       { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
     ],
@@ -55,7 +55,7 @@ export const ADMIN_NAV: NavSectionDef[] = [
   {
     title: "CONFIGURATION",
     items: [
-      { href: "/admin/settings", label: "Paramètres", icon: Settings },
+      { href: "/admin/parametres", label: "Paramètres", icon: Settings },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
     ],
   },
@@ -70,9 +70,11 @@ export const PAGE_TITLES: Record<string, string> = {
   "/admin/clients": "Clients",
   "/admin/kyc": "KYC en attente",
   "/admin/finances": "Revenus",
+  "/admin/revenus": "Revenus",
   "/admin/virements": "Virements",
   "/admin/analytics": "Analytics",
   "/admin/settings": "Paramètres",
+  "/admin/parametres": "Paramètres",
   "/admin/notifications": "Notifications",
 };
 

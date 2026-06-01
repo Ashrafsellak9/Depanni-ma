@@ -1,9 +1,9 @@
-import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
+import { AdminAnalyticsPage } from "@/components/admin/AdminAnalyticsPage";
 
-export default function AdminAnalyticsPage() {
+export default function AdminAnalyticsRoute() {
   return (
     <div className="rounded-2xl border border-dep-border bg-white p-5">
-      <AnalyticsDashboard />
+      <AdminAnalyticsPage />
     </div>
   );
 }

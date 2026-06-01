@@ -1,6 +1,13 @@
 export { AdminArtisansPage } from "./AdminArtisansPage";
 export { AdminClientsPage } from "./AdminClientsPage";
+export { AdminKycPage } from "./AdminKycPage";
 export { AdminMissionsPage } from "./AdminMissionsPage";
+export { AdminLitigesPage } from "./AdminLitigesPage";
+export { AdminAnalyticsPage } from "./AdminAnalyticsPage";
+export { AdminNotificationsPage } from "./AdminNotificationsPage";
+export { AdminParametresPage } from "./AdminParametresPage";
+export { AdminRevenusPage } from "./AdminRevenusPage";
+export { AdminVirementsPage } from "./AdminVirementsPage";
 export { AdminOverviewContent } from "./AdminOverviewContent";
 export { AdminPageCard } from "./AdminPageCard";
 export { AdminStubPage } from "./AdminStubPage";

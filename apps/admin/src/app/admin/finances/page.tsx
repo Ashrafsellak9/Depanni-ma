@@ -1,9 +1,9 @@
-import { RevenueReportView } from "@/components/finances/RevenueReportView";
+import { AdminRevenusPage } from "@/components/admin/AdminRevenusPage";
 
 export default function AdminFinancesPage() {
   return (
     <div className="rounded-2xl border border-dep-border bg-white p-5">
-      <RevenueReportView />
+      <AdminRevenusPage />
     </div>
   );
 }

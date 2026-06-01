@@ -2,11 +2,19 @@
 
 import { motion, useInView } from "framer-motion";
 import {
+  AlertTriangle,
   Banknote,
+  BarChart2,
+  CheckCircle,
   ClipboardList,
   Clock,
   HardHat,
+  MessageSquare,
   Star,
+  Timer,
+  TrendingUp,
+  UserPlus,
+  Users,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -14,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-type IconBg = "orange" | "navy" | "green" | "purple";
+type IconBg = "orange" | "navy" | "green" | "purple" | "red";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   ClipboardList,
@@ -23,6 +31,14 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Star,
   Zap,
   Clock,
+  AlertTriangle,
+  MessageSquare,
+  CheckCircle,
+  TrendingUp,
+  UserPlus,
+  Users,
+  Timer,
+  BarChart2,
 };
 
 const ICON_BG: Record<IconBg, string> = {
@@ -30,6 +46,7 @@ const ICON_BG: Record<IconBg, string> = {
   navy: "bg-navy/[0.08] text-navy",
   green: "bg-green/10 text-green",
   purple: "bg-dep-purple/10 text-dep-purple",
+  red: "bg-dep-red/10 text-dep-red",
 };
 
 export const KPI_DATA = [
@@ -72,6 +89,17 @@ export const KPI_DATA = [
 ];
 
 export type KpiDataItem = (typeof KPI_DATA)[number];
+
+export type KpiCardProps = {
+  label: string;
+  value: number | string;
+  suffix?: string;
+  change: string;
+  trend?: "up" | "down";
+  icon: string;
+  iconBg: IconBg;
+  isString?: boolean;
+};
 
 function CountUpValue({
   value,
@@ -123,13 +151,15 @@ function CountUpValue({
 export function KpiCard({
   label,
   value,
-  suffix,
+  suffix = "",
   change,
-  trend,
+  trend = "up",
   icon,
   iconBg,
-}: KpiDataItem) {
+  isString = false,
+}: KpiCardProps) {
   const Icon = ICON_MAP[icon] ?? ClipboardList;
+  const showString = isString || typeof value === "string";
 
   return (
     <motion.div
@@ -144,7 +174,16 @@ export function KpiCard({
         </div>
       </div>
       <div className="mt-3">
-        <CountUpValue value={value} suffix={suffix} />
+        {showString ? (
+          <span className="font-syne text-[32px] font-extrabold tracking-tight text-[#0F1E35]">
+            {value}
+            {suffix && (
+              <span className="font-dm text-lg font-normal text-dep-gray">{suffix}</span>
+            )}
+          </span>
+        ) : (
+          <CountUpValue value={value as number} suffix={suffix} />
+        )}
       </div>
       <p
         className={cn(

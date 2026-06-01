@@ -1,9 +1,5 @@
-import { DisputesList } from "@/components/disputes/DisputesList";
+import { AdminLitigesPage } from "@/components/admin/AdminLitigesPage";
 
-export default function AdminLitigesPage() {
-  return (
-    <div className="rounded-2xl border border-dep-border bg-white p-5">
-      <DisputesList />
-    </div>
-  );
+export default function LitigesRoute() {
+  return <AdminLitigesPage />;
 }
