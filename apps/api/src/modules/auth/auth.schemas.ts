@@ -27,9 +27,25 @@ export const registerArtisanSchema = z.object({
   lastName: z.string().min(2).max(50),
   locale: z.enum(["fr", "ar", "en"]).default("fr"),
   cinNumber: z.string().min(4).max(20).optional(),
-  serviceRadiusKm: z.coerce.number().min(1).max(100).default(15),
+  serviceRadiusKm: z.coerce.number().min(5).max(50).default(15),
   baseLat: z.coerce.number().min(-90).max(90).optional(),
   baseLng: z.coerce.number().min(-180).max(180).optional(),
+  specialties: z.preprocess(
+    (val) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") {
+        try {
+          const parsed: unknown = JSON.parse(val);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {
+          return val.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      }
+      return [];
+    },
+    z.array(z.string().min(1).max(80)).min(1, "Au moins un métier requis"),
+  ),
+  city: z.string().min(1).max(80).default("El Jadida"),
 });
 
 export const verifyOtpSchema = z.object({
@@ -54,15 +70,27 @@ export const resendOtpSchema = z.object({
   purpose: z.enum(["REGISTER", "RESET", "VERIFY_PHONE"]),
 });
 
-export const forgotPasswordSchema = z.object({
-  phone: moroccanPhoneSchema,
-});
+export const forgotPasswordSchema = z
+  .object({
+    phone: moroccanPhoneSchema.optional(),
+    email: z.string().email("Email invalide").optional(),
+  })
+  .refine((data) => Boolean(data.phone ?? data.email), {
+    message: "Email ou téléphone requis",
+    path: ["email"],
+  });
 
-export const resetPasswordSchema = z.object({
-  phone: moroccanPhoneSchema,
-  code: z.string().regex(/^\d{6}$/, "Code OTP à 6 chiffres"),
-  password: passwordSchema,
-});
+export const resetPasswordSchema = z
+  .object({
+    phone: moroccanPhoneSchema.optional(),
+    email: z.string().email("Email invalide").optional(),
+    code: z.string().regex(/^\d{6}$/, "Code OTP à 6 chiffres"),
+    password: passwordSchema,
+  })
+  .refine((data) => Boolean(data.phone ?? data.email), {
+    message: "Email ou téléphone requis",
+    path: ["email"],
+  });
 
 export type RegisterCitizenInput = z.infer<typeof registerCitizenSchema>;
 export type RegisterArtisanInput = z.infer<typeof registerArtisanSchema>;

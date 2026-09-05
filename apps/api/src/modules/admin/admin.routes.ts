@@ -1,10 +1,18 @@
 import { Router, type IRouter } from "express";
 
 import { authenticate, authorize } from "../../middleware/auth.js";
+import { globalLimiter } from "../../middleware/rateLimiter.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { adminController } from "./admin.controller.js";
 
 export const adminRoutes: IRouter = Router();
+
+/** Public — stats non sensibles pour le panneau de connexion admin */
+adminRoutes.get(
+  "/login-stats",
+  globalLimiter,
+  asyncHandler(adminController.loginStats),
+);
 
 adminRoutes.use(authenticate, authorize("ADMIN"));
 

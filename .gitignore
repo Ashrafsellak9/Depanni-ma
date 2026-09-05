@@ -23,6 +23,7 @@ coverage
 
 # Build Outputs
 .next/
+.next-qa/
 out/
 build
 dist
@@ -36,3 +37,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Local file uploads (API fallback when S3 is unset)
+apps/api/.uploads/

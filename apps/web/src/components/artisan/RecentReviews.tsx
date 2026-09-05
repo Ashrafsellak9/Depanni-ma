@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 
+import { DisplayTitle } from "@/components/ui/display-title";
+
 const REVIEWS = [
   {
     name: "Fatima Z.",
@@ -49,7 +51,9 @@ export function RecentReviews() {
       transition={{ delay: 0.35, duration: 0.4 }}
       className="rounded-2xl border border-dep-border bg-white p-5"
     >
-      <h3 className="mb-4 text-[14px] font-semibold text-navy">Derniers avis clients</h3>
+      <DisplayTitle as="h3" size="sm" className="mb-4 text-[14px] font-semibold">
+        Derniers avis clients
+      </DisplayTitle>
 
       {REVIEWS.length === 0 ? (
         <p className="py-6 text-center text-sm text-dep-gray">Aucune donnée</p>

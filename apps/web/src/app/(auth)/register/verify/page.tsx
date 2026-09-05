@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { AuthCard } from "@/components/auth/AuthCard";
 import { VerifyOtpForm } from "@/components/forms/VerifyOtpForm";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
@@ -10,8 +12,10 @@ export const metadata: Metadata = {
 
 export default function RegisterVerifyPage() {
   return (
-    <>
-      <h1 className="text-2xl font-bold text-navy">Vérification SMS</h1>
+    <AuthCard>
+      <DisplayTitle as="h1" size="display-3" className="text-[1.5rem]">
+        Vérification SMS
+      </DisplayTitle>
       <p className="mt-2 text-sm text-muted-foreground">
         Entrez le code reçu par SMS pour activer votre compte
       </p>
@@ -20,6 +24,6 @@ export default function RegisterVerifyPage() {
           <VerifyOtpForm />
         </Suspense>
       </div>
-    </>
+    </AuthCard>
   );
 }

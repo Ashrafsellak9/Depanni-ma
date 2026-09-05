@@ -1,6 +1,7 @@
 import { RECENTLY_PROCESSED } from "@/components/admin/kyc/adminKycMock";
 
-export function KycRecentlyProcessed() {
+export function KycRecentlyProcessed({ hidden }: { hidden?: boolean }) {
+  if (hidden) return null;
   return (
     <div className="mt-6">
       <h3 className="mb-3 font-['Syne'] text-[15px] font-bold text-[#0F1E35]">

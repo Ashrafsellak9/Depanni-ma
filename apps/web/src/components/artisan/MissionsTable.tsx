@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 
+import { DisplayTitle } from "@/components/ui/display-title";
+
 const MISSIONS = [
   {
     type: "🔧",
@@ -65,7 +67,9 @@ export function MissionsTable() {
       className="h-full rounded-2xl border border-dep-border bg-white p-5"
     >
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-navy">Missions récentes</h3>
+        <DisplayTitle as="h3" size="sm" className="text-[14px] font-semibold">
+          Missions récentes
+        </DisplayTitle>
         <Link href="/artisan/missions" className="text-xs font-medium text-orange hover:underline">
           Voir tout →
         </Link>

@@ -5,6 +5,7 @@ import { Check, Clock, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { useArtisanAuthStore } from "@/store/artisanAuthStore";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 const PROGRESS_STEPS = [
   { label: "Compte créé", done: true },
@@ -29,7 +30,7 @@ export default function ArtisanPendingPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-orange">
             <Wrench size={18} className="text-white" />
           </div>
-          <span className="font-syne text-[20px] font-extrabold text-navy">
+          <span className="font-display text-[20px] font-extrabold text-navy">
             DEPANNI<span className="text-orange">.ma</span>
           </span>
         </div>
@@ -50,11 +51,11 @@ export default function ArtisanPendingPage() {
             </div>
           </div>
 
-          <h1 className="mb-2 font-syne text-[26px] font-extrabold tracking-[-0.5px] text-navy">
+          <DisplayTitle as="h1" size="display-3" className="mb-2">
             Demande en cours
             <br />
             de validation
-          </h1>
+          </DisplayTitle>
           <p className="mb-6 text-[14px] leading-[1.7] text-dep-gray">
             Notre équipe examine votre profil et vos documents. Vous recevrez une notification par SMS
             dans les <strong className="text-navy">24 à 48 heures</strong>.

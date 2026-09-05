@@ -32,8 +32,9 @@ export const otpSendLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 3,
   keyGenerator: (req: Request): string => {
-    const body = req.body as { phone?: string } | undefined;
+    const body = req.body as { phone?: string; email?: string } | undefined;
     if (body?.phone) return `phone:${body.phone}`;
+    if (body?.email) return `email:${body.email.toLowerCase()}`;
     return ipKeyGenerator(req.ip ?? "unknown");
   },
 });

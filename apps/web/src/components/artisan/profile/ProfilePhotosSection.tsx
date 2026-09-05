@@ -3,6 +3,7 @@
 import { ImageIcon, Info, Plus, Trash2 } from "lucide-react";
 
 import type { ArtisanProfileForm } from "@/components/artisan/profile/useArtisanProfileForm";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 const PHOTO_LABELS = ["Avant/Après", "Installation", "Réparation"];
 
@@ -10,10 +11,10 @@ export function ProfilePhotosSection({ form }: { form: ArtisanProfileForm }) {
   return (
     <div className="mb-5 rounded-2xl border border-dep-border bg-white p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-[14px] font-semibold text-navy">
+        <DisplayTitle as="h3" size="sm" className="flex items-center gap-2 text-[14px] font-semibold">
           <ImageIcon size={15} className="text-orange" />
           Photos de réalisations
-        </h3>
+        </DisplayTitle>
         <span className="text-[11px] text-dep-gray">{form.photoCount}/6 ajoutées</span>
       </div>
 

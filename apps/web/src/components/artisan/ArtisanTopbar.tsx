@@ -6,6 +6,7 @@ import { fr } from "date-fns/locale";
 
 import { StatusToggle } from "@/components/artisan/StatusToggle";
 import { titleForPath } from "@/components/artisan/artisanNav";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 export function ArtisanTopbar({
   pathname,
@@ -31,7 +32,9 @@ export function ArtisanTopbar({
           </button>
         )}
         <div>
-          <h1 className="font-syne text-[18px] font-bold tracking-[-0.3px] text-navy">{title}</h1>
+          <DisplayTitle as="h1" size="sm" className="text-[18px] tracking-[-0.3px]">
+            {title}
+          </DisplayTitle>
           <p className="text-[11px] capitalize text-dep-gray">{today} · El Jadida</p>
         </div>
       </div>

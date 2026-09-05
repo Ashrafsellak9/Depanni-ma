@@ -4,21 +4,23 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
+import { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 
-import { GoogleMapProvider } from "@/components/maps/GoogleMapProvider";
 import { getQueryClient } from "@/lib/queryClient";
-import { initWebSentry } from "@/lib/sentry";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
-  if (typeof window !== "undefined") initWebSentry();
+
+  useEffect(() => {
+    void import("@/lib/sentry").then((m) => m.initWebSentry());
+  }, []);
 
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <GoogleMapProvider>{children}</GoogleMapProvider>
+          {children}
           <Toaster
             position="top-center"
             toastOptions={{

@@ -1,6 +1,7 @@
 "use client";
 
 import { HELP_CATEGORIES, type HelpCategoryId } from "@/components/artisan/help/artisanHelpData";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 type HelpCategoryGridProps = {
   activeCategory: HelpCategoryId | null;
@@ -10,9 +11,9 @@ type HelpCategoryGridProps = {
 export function HelpCategoryGrid({ activeCategory, onSelect }: HelpCategoryGridProps) {
   return (
     <div className="mb-6">
-      <h2 className="mb-3 font-['Syne'] text-[16px] font-bold text-[#0F1E35]">
+      <DisplayTitle as="h2" size="sm" className="mb-3 text-[16px]">
         Parcourir par thème
-      </h2>
+      </DisplayTitle>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {HELP_CATEGORIES.map((cat) => (
           <button

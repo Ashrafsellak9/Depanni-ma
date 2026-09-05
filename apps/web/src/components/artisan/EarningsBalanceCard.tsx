@@ -5,10 +5,21 @@ import { Building2, FileText } from "lucide-react";
 
 import { BALANCE } from "@/components/artisan/artisanRevenusMock";
 
-const goalPct = Math.round((BALANCE.goalCurrent / BALANCE.goalTarget) * 100);
-const goalRemaining = BALANCE.goalTarget - BALANCE.goalCurrent;
-
-export function EarningsBalanceCard() {
+export function EarningsBalanceCard({
+  available,
+  nextTransfer,
+}: {
+  available?: number;
+  nextTransfer?: string;
+}) {
+  const balance = {
+    ...BALANCE,
+    available: available ?? BALANCE.available,
+    goalCurrent: available ?? BALANCE.goalCurrent,
+    nextTransfer: nextTransfer ?? BALANCE.nextTransfer,
+  };
+  const goalPct = Math.round((balance.goalCurrent / balance.goalTarget) * 100);
+  const goalRemaining = Math.max(0, balance.goalTarget - balance.goalCurrent);
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -24,15 +35,15 @@ export function EarningsBalanceCard() {
             <div className="mb-1 text-[11px] uppercase tracking-[1.5px] text-white/40">
               Solde disponible
             </div>
-            <div className="font-syne text-[44px] font-extrabold leading-none tracking-[-3px] text-white md:text-[52px]">
-              {BALANCE.available.toLocaleString("fr-FR")}
-              <span className="ml-2 font-dm text-[20px] font-light text-white/50 md:text-[22px]">
+            <div className="font-display text-[44px] font-extrabold leading-none tracking-[-3px] text-white md:text-[52px]">
+              {balance.available.toLocaleString("fr-FR")}
+              <span className="ml-2 font-sans text-[20px] font-light text-white/50 md:text-[22px]">
                 MAD
               </span>
             </div>
           </div>
           <select
-            className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 font-dm text-[12px] text-white outline-none"
+            className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 font-sans text-[12px] text-white outline-none"
             defaultValue="mai-2026"
           >
             <option value="mai-2026">Mai 2026</option>
@@ -45,7 +56,7 @@ export function EarningsBalanceCard() {
           <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green" />
           <span className="text-[12px] text-white/50">
             Prochain virement automatique :
-            <strong className="ml-1 text-white">{BALANCE.nextTransfer}</strong>
+            <strong className="ml-1 text-white">{balance.nextTransfer}</strong>
           </span>
         </div>
 
@@ -53,8 +64,8 @@ export function EarningsBalanceCard() {
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[12px] text-white/60">Objectif mensuel</span>
             <span className="text-[12px] font-semibold text-white">
-              {BALANCE.goalCurrent.toLocaleString("fr-FR")} /{" "}
-              {BALANCE.goalTarget.toLocaleString("fr-FR")} MAD
+              {balance.goalCurrent.toLocaleString("fr-FR")} /{" "}
+              {balance.goalTarget.toLocaleString("fr-FR")} MAD
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">

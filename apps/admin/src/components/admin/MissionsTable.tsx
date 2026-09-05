@@ -88,8 +88,15 @@ const MISSIONS: OverviewMission[] = [
   },
 ];
 
-export function MissionsTable({ compact = true }: { compact?: boolean }) {
-  const rows = MISSIONS.slice(0, compact ? 5 : MISSIONS.length);
+export function MissionsTable({
+  compact = true,
+  missions,
+}: {
+  compact?: boolean;
+  missions?: OverviewMission[];
+}) {
+  const source = missions ?? MISSIONS;
+  const rows = source.slice(0, compact ? 5 : source.length);
 
   return (
     <motion.div

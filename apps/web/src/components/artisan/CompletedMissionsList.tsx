@@ -20,17 +20,17 @@ export function CompletedMissionsList({ missions }: CompletedMissionsListProps) 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid flex-1 grid-cols-3 gap-3 sm:max-w-md">
           <div className="rounded-xl border border-dep-border bg-white p-3 text-center">
-            <div className="font-syne text-[20px] font-bold text-navy">{missions.length}</div>
+            <div className="font-display text-[20px] font-bold text-navy">{missions.length}</div>
             <div className="text-[11px] text-dep-gray">Ce mois</div>
           </div>
           <div className="rounded-xl border border-dep-border bg-white p-3 text-center">
-            <div className="font-syne text-[20px] font-bold text-green">
+            <div className="font-display text-[20px] font-bold text-green">
               {totalBrut.toLocaleString("fr-FR")}
             </div>
             <div className="text-[11px] text-dep-gray">MAD brut</div>
           </div>
           <div className="rounded-xl border border-dep-border bg-white p-3 text-center">
-            <div className="font-syne text-[20px] font-bold text-navy">{avgRating}★</div>
+            <div className="font-display text-[20px] font-bold text-navy">{avgRating}★</div>
             <div className="text-[11px] text-dep-gray">Note moy.</div>
           </div>
         </div>

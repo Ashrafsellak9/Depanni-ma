@@ -7,14 +7,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { artisanAuth } from "@/lib/artisanAuth";
+import { Accent, DisplayTitle } from "@/components/ui/display-title";
 import { useArtisanAuthStore } from "@/store/artisanAuthStore";
 
 export default function ArtisanLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const syncFromCookies = useArtisanAuthStore((s) => s.syncFromCookies);
-  const [phone, setPhone] = useState("0600000000");
-  const [password, setPassword] = useState("demo2026");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,8 +24,7 @@ export default function ArtisanLoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    await new Promise((r) => setTimeout(r, 1200));
-    const result = artisanAuth.login({ phone, password });
+    const result = await artisanAuth.login({ phone, password });
     if (result.success) {
       syncFromCookies();
       const callback = searchParams.get("callbackUrl");
@@ -52,7 +52,7 @@ export default function ArtisanLoginPage() {
             <Wrench size={18} className="text-white" />
           </div>
           <div>
-            <div className="font-syne text-[20px] font-extrabold text-white">
+            <div className="font-display text-[20px] font-extrabold text-white">
               DEPANNI<span className="text-orange">.ma</span>
             </div>
             <div className="text-[9px] uppercase tracking-[1.5px] text-white/30">Espace artisan</div>
@@ -60,13 +60,13 @@ export default function ArtisanLoginPage() {
         </div>
 
         <div className="relative z-10">
-          <h1 className="mb-4 font-syne text-[40px] font-extrabold leading-[1.05] tracking-[-2px] text-white">
+          <DisplayTitle as="h1" size="display-2" className="mb-4 text-white">
             Recevez des
             <br />
             missions près
             <br />
-            <span className="text-orange">de chez vous</span>
-          </h1>
+            de chez <Accent>vous</Accent>
+          </DisplayTitle>
           <p className="max-w-[300px] text-[14px] leading-[1.7] text-white/50">
             Rejoignez 280+ artisans qui développent leur activité avec DEPANNI.ma à El Jadida.
           </p>
@@ -108,9 +108,9 @@ export default function ArtisanLoginPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[14px] bg-navy lg:hidden">
               <Wrench size={20} className="text-orange" />
             </div>
-            <h2 className="mb-1 font-syne text-[22px] font-extrabold tracking-[-0.5px] text-navy">
+            <DisplayTitle as="h2" size="sm" className="mb-1 text-[22px]">
               Connexion Artisan
-            </h2>
+            </DisplayTitle>
             <p className="text-[13px] text-dep-gray">Accédez à votre espace professionnel</p>
           </div>
 
@@ -139,9 +139,9 @@ export default function ArtisanLoginPage() {
                 <label className="text-[11px] font-semibold uppercase tracking-[0.4px] text-navy">
                   Mot de passe
                 </label>
-                <a href="#" className="text-[12px] text-orange hover:text-orange-2" onClick={(e) => e.preventDefault()}>
+                <Link href="/forgot-password" className="text-[12px] text-orange hover:text-orange-2">
                   Oublié ?
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dep-gray" />
@@ -192,21 +192,6 @@ export default function ArtisanLoginPage() {
               )}
             </motion.button>
           </form>
-
-          <div className="mt-4 space-y-1.5 rounded-xl border border-orange/15 bg-orange/[0.06] px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green" />
-              <span className="text-[11px] text-navy">
-                <strong>Démo approuvé :</strong> 0600000000 / demo2026
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-orange" />
-              <span className="text-[11px] text-navy">
-                <strong>Démo en attente :</strong> 0611111111 / demo2026
-              </span>
-            </div>
-          </div>
 
           <div className="mt-5 border-t border-dep-border pt-4 text-center">
             <span className="text-[13px] text-dep-gray">Pas encore artisan ? </span>

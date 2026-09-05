@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import type { ArtisanProfileForm } from "@/components/artisan/profile/useArtisanProfileForm";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 const CHECKLIST = [
   { label: "Informations de base", done: true },
@@ -48,7 +49,9 @@ export function ProfileSidebar({ form }: { form: ArtisanProfileForm }) {
   return (
     <div className="space-y-4 lg:sticky lg:top-20">
       <div className="rounded-2xl border border-dep-border bg-white p-5">
-        <h3 className="mb-4 text-[14px] font-semibold text-navy">Score de profil</h3>
+        <DisplayTitle as="h3" size="sm" className="mb-4 text-[14px] font-semibold">
+          Score de profil
+        </DisplayTitle>
 
         <div className="mb-5 flex items-center gap-4">
           <div className="relative h-20 w-20 shrink-0">
@@ -69,7 +72,7 @@ export function ProfileSidebar({ form }: { form: ArtisanProfileForm }) {
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="font-syne text-[18px] font-extrabold text-navy">{score}%</span>
+              <span className="font-display text-[18px] font-extrabold text-navy">{score}%</span>
             </div>
           </div>
           <div>
@@ -115,7 +118,9 @@ export function ProfileSidebar({ form }: { form: ArtisanProfileForm }) {
 
       <div className="rounded-2xl border border-dep-border bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-navy">Aperçu client</h3>
+          <DisplayTitle as="h3" size="sm" className="text-[13px] font-semibold">
+            Aperçu client
+          </DisplayTitle>
           <span className="text-[10px] text-dep-gray">Voici ce que voient les clients</span>
         </div>
         <div className="rounded-xl border border-dep-border bg-cream p-3">
@@ -159,7 +164,9 @@ export function ProfileSidebar({ form }: { form: ArtisanProfileForm }) {
       </div>
 
       <div className="rounded-2xl border border-dep-border bg-white p-5">
-        <h3 className="mb-3 text-[13px] font-semibold text-navy">Performance du profil</h3>
+        <DisplayTitle as="h3" size="sm" className="mb-3 text-[13px] font-semibold">
+          Performance du profil
+        </DisplayTitle>
         <div className="space-y-0">
           {STATS.map((s) => {
             const Icon = s.icon;

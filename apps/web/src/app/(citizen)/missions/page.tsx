@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMyMissions } from "@/hooks/citizen/useMyMissions";
+import { DisplayTitle } from "@/components/ui/display-title";
 import type { JobStatus } from "@/types";
 
 const STATUS_OPTIONS: { value: JobStatus | ""; label: string }[] = [
@@ -45,7 +46,9 @@ export default function MissionsHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-navy">Historique</h1>
+        <DisplayTitle as="h1" size="sm" className="text-2xl">
+          Historique
+        </DisplayTitle>
         <p className="text-muted-foreground">Toutes vos demandes et missions</p>
       </div>
 

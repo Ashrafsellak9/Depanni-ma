@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { disconnectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { assertJwtKeyPairAtStartup } from "./config/jwt.js";
+import { assertStorageConfiguredAtStartup } from "./config/s3.js";
 import { disconnectRedis } from "./config/redis.js";
 import { closeJobDiffusionQueue, startJobDiffusionWorker } from "./jobs/jobDiffusionQueue.js";
 import { startMonthlyReportScheduler } from "./jobs/monthlyReport.cron.js";
@@ -24,6 +25,7 @@ let isShuttingDown = false;
 async function bootstrap(): Promise<void> {
   initSentry();
   assertJwtKeyPairAtStartup();
+  assertStorageConfiguredAtStartup();
   startJobDiffusionWorker();
   startPayoutWorker();
   startEmailWorker();

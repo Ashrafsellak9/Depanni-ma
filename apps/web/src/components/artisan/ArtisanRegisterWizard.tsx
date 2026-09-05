@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ServiceZoneMap } from "@/components/maps/ServiceZoneMap";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { artisanAuth } from "@/lib/artisanAuth";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapsConfig";
 import { useArtisanAuthStore } from "@/store/artisanAuthStore";
@@ -141,8 +142,7 @@ export function ArtisanRegisterWizard() {
   const handleRegister = async () => {
     if (!validateStep(4)) return;
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    artisanAuth.register({
+    const result = await artisanAuth.register({
       firstName,
       lastName,
       phone,
@@ -153,6 +153,11 @@ export function ArtisanRegisterWizard() {
       radiusKm,
       experience,
     });
+    if (!result.success) {
+      setStepError(result.error ?? "Inscription impossible");
+      setIsSubmitting(false);
+      return;
+    }
     syncFromCookies();
     router.push("/artisan/pending");
   };
@@ -168,7 +173,7 @@ export function ArtisanRegisterWizard() {
           <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-orange">
             <Wrench size={18} className="text-white" />
           </div>
-          <span className="font-syne text-[20px] font-extrabold text-navy">
+          <span className="font-display text-[20px] font-extrabold text-navy">
             DEPANNI<span className="text-orange">.ma</span>
           </span>
         </div>
@@ -178,9 +183,9 @@ export function ArtisanRegisterWizard() {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border border-dep-border bg-white p-6 shadow-[0_8px_40px_rgba(15,30,53,0.08)] md:p-8"
         >
-          <h1 className="mb-1 text-center font-syne text-[22px] font-extrabold text-navy">
+          <DisplayTitle as="h1" size="sm" className="mb-1 text-center text-[22px]">
             Créer mon compte artisan
-          </h1>
+          </DisplayTitle>
           <p className="mb-6 text-center text-[13px] text-dep-gray">Inscription en 4 étapes</p>
 
           <div className="mb-8 flex items-center">

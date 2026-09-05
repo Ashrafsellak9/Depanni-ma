@@ -2,6 +2,8 @@
 
 import { AlertCircle, Check, ChevronRight, Lock, Shield } from "lucide-react";
 
+import { DisplayTitle } from "@/components/ui/display-title";
+
 const DOCUMENTS = [
   { label: "CIN Recto", status: "verified" as const, date: "Vérifié le 15 Mar 2026" },
   { label: "CIN Verso", status: "verified" as const, date: "Vérifié le 15 Mar 2026" },
@@ -12,10 +14,10 @@ const DOCUMENTS = [
 export function ProfileSecuritySection() {
   return (
     <div className="mb-5 rounded-2xl border border-dep-border bg-white p-6">
-      <h3 className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-navy">
+      <DisplayTitle as="h3" size="sm" className="mb-4 flex items-center gap-2 text-[14px] font-semibold">
         <Shield size={15} className="text-orange" />
         Sécurité & Documents
-      </h3>
+      </DisplayTitle>
 
       <div className="mb-5 space-y-0">
         {DOCUMENTS.map((doc) => (

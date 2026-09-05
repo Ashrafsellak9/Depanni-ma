@@ -41,9 +41,15 @@ export class NotificationsService {
   }
 
   private loggerWarnDev(phone: string, body: string): void {
-    logger.warn("Twilio not configured — OTP logged in dev", {
+    if (env.NODE_ENV === "development" || env.NODE_ENV === "test") {
+      logger.warn("Twilio not configured — OTP logged in cleartext (dev only)", {
+        phone,
+        body,
+      });
+      return;
+    }
+    logger.warn("Twilio not configured — OTP suppressed outside development", {
       phone,
-      body: body.replace(/\d{6}/, "******"),
     });
   }
 

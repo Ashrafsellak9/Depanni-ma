@@ -31,7 +31,22 @@ const ACTIVITIES = [
   },
 ];
 
-export function ActivityFeed() {
+export type ActivityFeedItem = { color?: string; text: string | string[]; time: string; dot?: string };
+
+const DOT_TO_COLOR: Record<string, string> = {
+  "bg-green": "#1B8A4E",
+  "bg-dep-purple": "#7C3AED",
+  "bg-dep-red": "#DC2626",
+  "bg-orange": "#F05A1A",
+};
+
+export function ActivityFeed({ items }: { items?: ActivityFeedItem[] }) {
+  const list =
+    items?.map((item) => ({
+      color: item.color ?? (item.dot ? DOT_TO_COLOR[item.dot] ?? "#F05A1A" : "#F05A1A"),
+      text: Array.isArray(item.text) ? item.text : [item.text],
+      time: item.time,
+    })) ?? ACTIVITIES;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -46,11 +61,11 @@ export function ActivityFeed() {
         </Link>
       </div>
 
-      {ACTIVITIES.length === 0 ? (
+      {list.length === 0 ? (
         <p className="py-6 text-center text-sm text-[#6B7280]">Aucune donnée</p>
       ) : (
         <ul>
-          {ACTIVITIES.map((item, i) => (
+          {list.map((item, i) => (
             <li
               key={i}
               className="flex gap-2.5 border-b border-[#E5E0D8] py-2.5 last:border-0"

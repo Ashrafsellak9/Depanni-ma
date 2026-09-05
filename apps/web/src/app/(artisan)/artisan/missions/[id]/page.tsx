@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useArtisanMission } from "@/hooks/artisan/useArtisanMissions";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { api, getApiErrorMessage } from "@/lib/api";
 
 export default function ArtisanMissionDetailPage() {
@@ -73,7 +74,9 @@ export default function ArtisanMissionDetailPage() {
               Missions
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold text-navy">{mission.job.title}</h1>
+          <DisplayTitle as="h1" size="sm" className="text-2xl">
+            {mission.job.title}
+          </DisplayTitle>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <MissionStatusBadge status={mission.status} />
             <span>

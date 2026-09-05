@@ -19,6 +19,7 @@ function loadEnvFile(filePath) {
     if (eq <= 0) continue;
 
     const key = line.slice(0, eq).trim();
+    if (key === "NODE_ENV") continue;
     let value = line.slice(eq + 1).trim();
 
     if (
@@ -28,7 +29,9 @@ function loadEnvFile(filePath) {
       value = value.slice(1, -1);
     }
 
-    process.env[key] = value;
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
   }
 }
 
@@ -55,4 +58,9 @@ export function getGoogleMapsPublicKey() {
     process.env.GOOGLE_MAPS_API_KEY?.trim() ||
     ""
   );
+}
+
+/** Clé CARTO Basemaps (tuiles Leaflet landing). */
+export function getCartoBasemapKey() {
+  return process.env.NEXT_PUBLIC_CARTO_API_KEY?.trim() || "";
 }

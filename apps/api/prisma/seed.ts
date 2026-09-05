@@ -1,14 +1,63 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import {
+  LEGACY_ADMIN_EMAIL,
+  SEED_ADMIN_EMAIL,
+  SEED_ADMIN_PHONE,
+  SEED_PASSWORD,
+} from "./seed.credentials.js";
+
 const prisma = new PrismaClient();
 
 const SALT_ROUNDS = 12;
 
+async function upsertAdmin(passwordHash: string) {
+  const legacy = await prisma.user.findUnique({
+    where: { email: LEGACY_ADMIN_EMAIL },
+  });
+
+  if (legacy && LEGACY_ADMIN_EMAIL !== SEED_ADMIN_EMAIL) {
+    const adminUser = await prisma.user.update({
+      where: { id: legacy.id },
+      data: {
+        email: SEED_ADMIN_EMAIL,
+        phone: SEED_ADMIN_PHONE,
+        passwordHash,
+        role: "ADMIN",
+        isVerified: true,
+        accountStatus: "ACTIVE",
+      },
+    });
+    console.log("  ✓ Admin migré (ancien email révoqué):", adminUser.email);
+    return adminUser;
+  }
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: SEED_ADMIN_EMAIL },
+    create: {
+      email: SEED_ADMIN_EMAIL,
+      phone: SEED_ADMIN_PHONE,
+      passwordHash,
+      role: "ADMIN",
+      isVerified: true,
+    },
+    update: {
+      phone: SEED_ADMIN_PHONE,
+      passwordHash,
+      role: "ADMIN",
+      isVerified: true,
+      accountStatus: "ACTIVE",
+    },
+  });
+  console.log("  ✓ Admin:", adminUser.email);
+  return adminUser;
+}
+
 async function main(): Promise<void> {
   console.log("🌱 Seeding DEPANNI.ma...");
 
-  const passwordHash = await bcrypt.hash("Depanni@2026!", SALT_ROUNDS);
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, SALT_ROUNDS);
 
   const categories = [
     { slug: "plomberie", nameFr: "Plomberie", nameAr: "السباكة" },
@@ -27,18 +76,7 @@ async function main(): Promise<void> {
     });
   }
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: "admin@depanni.ma" },
-    create: {
-      email: "admin@depanni.ma",
-      phone: "+212600000001",
-      passwordHash,
-      role: "ADMIN",
-      isVerified: true,
-    },
-    update: { isVerified: true },
-  });
-  console.log("  ✓ Admin:", adminUser.email);
+  await upsertAdmin(passwordHash);
 
   const citizenData = [
     { email: "fatima@example.ma", phone: "+212612345678", firstName: "Fatima", lastName: "Alaoui" },
@@ -56,7 +94,7 @@ async function main(): Promise<void> {
         role: "CITIZEN",
         isVerified: true,
       },
-      update: { isVerified: true },
+      update: { passwordHash, isVerified: true },
     });
 
     await prisma.citizen.upsert({
@@ -143,7 +181,7 @@ async function main(): Promise<void> {
         role: "ARTISAN",
         isVerified: true,
       },
-      update: { isVerified: true },
+      update: { passwordHash, isVerified: true },
     });
 
     const artisan = await prisma.artisan.upsert({
@@ -172,11 +210,15 @@ async function main(): Promise<void> {
       },
     });
 
-    await prisma.$executeRaw`
-      UPDATE artisans
-      SET location = ST_SetSRID(ST_MakePoint(${a.lng}, ${a.lat}), 4326)::geography
-      WHERE id = ${artisan.id}
-    `;
+    try {
+      await prisma.$executeRaw`
+        UPDATE artisans
+        SET location = ST_SetSRID(ST_MakePoint(${a.lng}, ${a.lat}), 4326)::geography
+        WHERE id = ${artisan.id}
+      `;
+    } catch {
+      // Colonne geography absente si migration PostGIS non appliquée
+    }
 
     await prisma.wallet.upsert({
       where: { artisanId: artisan.id },
@@ -202,16 +244,30 @@ async function main(): Promise<void> {
     console.log("  ✓ Artisan:", a.email, `(${a.tier})`);
   }
 
-  await prisma.$executeRaw`
-    UPDATE artisans
-    SET location = ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
-    WHERE lat IS NOT NULL AND lng IS NOT NULL
-  `;
+  try {
+    await prisma.$executeRaw`
+      UPDATE artisans
+      SET location = ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
+      WHERE lat IS NOT NULL AND lng IS NOT NULL
+    `;
+  } catch {
+    console.warn("  ⚠ Colonne artisans.location absente — skip PostGIS (migrations à jour recommandées)");
+  }
+
+  // Révoquer les sessions éventuelles du compte admin seed
+  const admin = await prisma.user.findUnique({ where: { email: SEED_ADMIN_EMAIL } });
+  if (admin) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: admin.id, isRevoked: false },
+      data: { isRevoked: true },
+    });
+  }
 
   console.log("\n✅ Seed terminé.");
-  console.log("   Admin     : admin@depanni.ma / Depanni@2026!");
-  console.log("   Citoyens  : fatima@, youssef@, sara@example.ma");
-  console.log("   Artisans  : *@example.ma (5 comptes)");
+  console.log(`   Admin     : ${SEED_ADMIN_EMAIL} / ${SEED_PASSWORD}`);
+  console.log("   Citoyens  : fatima@, youssef@, sara@example.ma (même mot de passe seed)");
+  console.log("   Artisans  : *@example.ma (5 comptes, même mot de passe seed)");
+  console.log("   Surcharge : SEED_ADMIN_EMAIL / SEED_PASSWORD / SEED_ADMIN_PHONE");
 }
 
 main()

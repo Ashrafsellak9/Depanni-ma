@@ -13,6 +13,7 @@ import {
   type ReviewFilterId,
 } from "@/components/artisan/reviews/artisanReviewsMock";
 import { ReviewCard } from "@/components/artisan/reviews/ReviewCard";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 const FILTER_TABS: { label: string; id: ReviewFilterId }[] = [
   { label: "Tous", id: "all" },
@@ -52,7 +53,9 @@ export function ReviewsList({ reviews, onReply }: ReviewsListProps) {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="font-['Syne'] text-[18px] font-bold text-[#0F1E35]">Mes avis clients</h2>
+          <DisplayTitle as="h2" size="sm" className="text-[18px]">
+            Mes avis clients
+          </DisplayTitle>
           <p className="text-[12px] text-[#6B7280]">
             {TOTAL_REVIEWS} avis · Note moyenne {AVERAGE_RATING}/5
           </p>

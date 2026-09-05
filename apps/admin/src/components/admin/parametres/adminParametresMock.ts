@@ -71,7 +71,7 @@ export const ADMIN_TEAM = [
     initials: "AD",
     color: "#0F1E35",
     name: "Admin Principal",
-    email: "admin@depanni.ma",
+    email: "ops@depanni.ma",
     role: "Super Admin",
     lastLogin: "Aujourd'hui 09h41",
   },

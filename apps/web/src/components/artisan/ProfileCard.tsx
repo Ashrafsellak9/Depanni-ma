@@ -22,7 +22,7 @@ export function ProfileCard() {
           KA
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-syne text-[17px] font-bold text-navy">Khalid Amrani</div>
+          <div className="font-display text-[17px] font-bold text-navy">Khalid Amrani</div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
             <span className="text-[12px] text-dep-gray">Plombier</span>
             <span className="rounded-full bg-green/10 px-2 py-0.5 text-[10px] font-semibold text-green">
@@ -31,7 +31,7 @@ export function ProfileCard() {
           </div>
         </div>
         <div className="text-right">
-          <div className="font-syne text-[20px] font-bold text-navy">4.9</div>
+          <div className="font-display text-[20px] font-bold text-navy">4.9</div>
           <div className="text-[11px] text-orange">★★★★★</div>
         </div>
       </div>
@@ -43,7 +43,7 @@ export function ProfileCard() {
           { label: "Revenus", value: "3.2K" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl bg-cream p-3 text-center">
-            <div className="font-syne text-[16px] font-bold text-navy">{s.value}</div>
+            <div className="font-display text-[16px] font-bold text-navy">{s.value}</div>
             <div className="mt-0.5 text-[10px] text-dep-gray">{s.label}</div>
           </div>
         ))}

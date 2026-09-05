@@ -3,6 +3,7 @@
 import { create } from "zustand";
 
 import { artisanAuth, getArtisanCookie } from "@/lib/artisanAuth";
+import { setAccessToken } from "@/lib/token";
 
 interface ArtisanAuthState {
   token: string | null;
@@ -22,17 +23,21 @@ export const useArtisanAuthStore = create<ArtisanAuthState>((set) => ({
   initials: null,
   hydrated: false,
   hydrate: () => {
+    const token = getArtisanCookie("artisan_token") ?? null;
+    if (token && token !== "pending_verify") setAccessToken(token);
     set({
-      token: getArtisanCookie("artisan_token") ?? null,
+      token,
       status: (getArtisanCookie("artisan_status") as "approved" | "pending") ?? null,
       name: getArtisanCookie("artisan_name") ?? null,
-      initials: getArtisanCookie("artisan_initials") ?? "KA",
+      initials: getArtisanCookie("artisan_initials") ?? "A",
       hydrated: true,
     });
   },
   syncFromCookies: () => {
+    const token = getArtisanCookie("artisan_token") ?? null;
+    if (token && token !== "pending_verify") setAccessToken(token);
     set({
-      token: getArtisanCookie("artisan_token") ?? null,
+      token,
       status: (getArtisanCookie("artisan_status") as "approved" | "pending") ?? null,
       name: getArtisanCookie("artisan_name") ?? null,
       initials: getArtisanCookie("artisan_initials") ?? null,

@@ -26,7 +26,7 @@ export function buildCmiPaymentForm(params: {
     amount: amountStr,
     oid: params.orderId,
     okUrl: env.CMI_RETURN_URL,
-    failUrl: env.CMI_RETURN_URL,
+    failUrl: env.CMI_FAIL_URL,
     callbackUrl: env.CMI_CALLBACK_URL,
     currency: params.currency ?? "504",
     lang: "fr",

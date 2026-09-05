@@ -19,6 +19,52 @@ export class AdminService {
     return this.getOverview();
   }
 
+  /**
+   * Stats publiques pour le panneau de connexion admin (pas de données sensibles).
+   */
+  async getLoginStats() {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const [activeArtisans, ratingAgg, missions] = await Promise.all([
+      prisma.artisan.count({
+        where: {
+          kycStatus: "APPROVED",
+          user: { accountStatus: "ACTIVE" },
+        },
+      }),
+      prisma.artisan.aggregate({
+        where: { kycStatus: "APPROVED" },
+        _avg: { rating: true },
+      }),
+      prisma.mission.findMany({
+        where: {
+          createdAt: { gte: since },
+          startedAt: { not: null },
+        },
+        select: { createdAt: true, startedAt: true },
+        take: 500,
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    let avgResponseMinutes: number | null = null;
+    if (missions.length > 0) {
+      const totalMs = missions.reduce((sum, m) => {
+        const started = m.startedAt!.getTime();
+        const created = m.createdAt.getTime();
+        return sum + Math.max(0, started - created);
+      }, 0);
+      avgResponseMinutes = Math.max(1, Math.round(totalMs / missions.length / 60_000));
+    }
+
+    return {
+      activeArtisans,
+      averageRating: Math.round((ratingAgg._avg.rating ?? 0) * 10) / 10,
+      avgResponseMinutes,
+    };
+  }
+
   async getOverview() {
     const now = new Date();
     const startOfDay = new Date(now);

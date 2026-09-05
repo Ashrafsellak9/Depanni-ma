@@ -18,6 +18,7 @@ import {
   TOTAL_REVIEWS,
   AVERAGE_RATING,
 } from "@/components/artisan/reviews/artisanReviewsMock";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 type ReviewsSidebarProps = {
   unrepliedCount: number;
@@ -32,9 +33,9 @@ export function ReviewsSidebar({ unrepliedCount }: ReviewsSidebarProps) {
             <div className="mb-1 text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
               Note globale
             </div>
-            <div className="font-['Syne'] text-[52px] font-black leading-none tracking-[-3px] text-white">
+            <div className="font-display text-[52px] font-black leading-none tracking-[-3px] text-white">
               {AVERAGE_RATING}
-              <span className="font-['DM_Sans'] text-[20px] font-light text-[rgba(255,255,255,0.4)]">
+              <span className="font-sans text-[20px] font-light text-[rgba(255,255,255,0.4)]">
                 /5
               </span>
             </div>
@@ -76,7 +77,9 @@ export function ReviewsSidebar({ unrepliedCount }: ReviewsSidebarProps) {
       </div>
 
       <div className="mb-4 rounded-2xl border border-[#E5E0D8] bg-white p-5">
-        <h3 className="mb-4 text-[13px] font-semibold text-[#0F1E35]">Évaluation par critère</h3>
+        <DisplayTitle as="h3" size="sm" className="mb-4 text-[13px] font-semibold">
+          Évaluation par critère
+        </DisplayTitle>
         {CRITERIA_BREAKDOWN.map((c) => (
           <div key={c.label} className="mb-3 last:mb-0">
             <div className="mb-1 flex items-center justify-between">
@@ -98,7 +101,9 @@ export function ReviewsSidebar({ unrepliedCount }: ReviewsSidebarProps) {
 
       <div className="mb-4 rounded-2xl border border-[#E5E0D8] bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-[#0F1E35]">Évolution de la note</h3>
+          <DisplayTitle as="h3" size="sm" className="text-[13px] font-semibold">
+            Évolution de la note
+          </DisplayTitle>
           <span className="text-[10px] font-semibold text-[#1B8A4E]">↑ +0.2 ce mois</span>
         </div>
         <div style={{ height: 80 }}>
@@ -157,7 +162,7 @@ export function ReviewsSidebar({ unrepliedCount }: ReviewsSidebarProps) {
                 <Icon size={12} style={{ color: s.color }} />
                 <span className="text-[10px] text-[#6B7280]">{s.label}</span>
               </div>
-              <div className="font-['Syne'] text-[20px] font-bold text-[#0F1E35]">{s.value}</div>
+              <div className="font-display text-[20px] font-bold text-[#0F1E35]">{s.value}</div>
             </div>
           );
         })}

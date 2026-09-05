@@ -35,7 +35,7 @@ export function RevenusSubscriptionCard() {
         <span className="text-[12px] text-green">
           💰 Économie réalisée ce mois vs commission standard (15%)
         </span>
-        <span className="font-syne text-[16px] font-bold text-green">+188 MAD</span>
+        <span className="font-display text-[16px] font-bold text-green">+188 MAD</span>
       </div>
     </motion.div>
   );

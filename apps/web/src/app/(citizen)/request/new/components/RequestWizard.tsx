@@ -17,6 +17,7 @@ import { LocationPicker } from "@/components/maps";
 import { PhotoUpload, type PhotoFile } from "@/app/(citizen)/request/new/components/PhotoUpload";
 import { UrgencySelector } from "@/app/(citizen)/request/new/components/UrgencySelector";
 import { Button } from "@/components/ui/button";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, getApiErrorMessage } from "@/lib/api";
@@ -254,7 +255,9 @@ export function RequestWizard() {
 
       {step === 1 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-navy">Quel service ?</h2>
+          <DisplayTitle as="h2" size="sm" className="mb-4 text-lg font-semibold">
+            Quel service&nbsp;?
+          </DisplayTitle>
           <CategoryGrid
             value={values.categoryId}
             onSelect={onCategorySelect}
@@ -265,7 +268,9 @@ export function RequestWizard() {
 
       {step === 2 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-navy">Précisez le besoin</h2>
+          <DisplayTitle as="h2" size="sm" className="mb-4 text-lg font-semibold">
+            Précisez le besoin
+          </DisplayTitle>
           <div className="grid gap-2 sm:grid-cols-2">
             {subcategories.map((sub) => (
               <button
@@ -298,7 +303,9 @@ export function RequestWizard() {
 
       {step === 3 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-navy">Décrivez le problème</h2>
+          <DisplayTitle as="h2" size="sm" className="mb-4 text-lg font-semibold">
+            Décrivez le problème
+          </DisplayTitle>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="description">Description</Label>
@@ -333,7 +340,9 @@ export function RequestWizard() {
 
       {step === 4 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-navy">Où intervenir ?</h2>
+          <DisplayTitle as="h2" size="sm" className="mb-4 text-lg font-semibold">
+            Où intervenir&nbsp;?
+          </DisplayTitle>
           <LocationPicker
             lat={values.lat}
             lng={values.lng}
@@ -355,7 +364,9 @@ export function RequestWizard() {
 
       {step === 5 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-navy">Urgence & budget</h2>
+          <DisplayTitle as="h2" size="sm" className="mb-4 text-lg font-semibold">
+            Urgence & budget
+          </DisplayTitle>
           <UrgencySelector
             urgency={values.urgency ?? "NOW"}
             scheduledAt={values.scheduledAt}
@@ -377,7 +388,9 @@ export function RequestWizard() {
 
       {step === 6 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-navy">Récapitulatif</h2>
+          <DisplayTitle as="h2" size="sm" className="text-lg font-semibold">
+            Récapitulatif
+          </DisplayTitle>
           <dl className="space-y-3 rounded-xl border bg-card p-4 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Service</dt>

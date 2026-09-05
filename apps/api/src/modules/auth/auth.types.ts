@@ -17,6 +17,8 @@ export interface RegisterPendingResponse {
   userId: string;
   phone: string;
   otpSent: boolean;
+  /** Présent uniquement en development/test sans Twilio — jamais en production. */
+  devOtp?: string;
 }
 
 export interface AuthSessionResponse {

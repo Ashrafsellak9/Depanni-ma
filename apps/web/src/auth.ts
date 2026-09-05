@@ -19,17 +19,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
+        phone: { label: "Téléphone", type: "tel" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         const email = credentials?.email as string | undefined;
+        const phone = credentials?.phone as string | undefined;
         const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
+        if (!password || (!email && !phone)) return null;
 
         const res = await fetch(`${API_URL}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({
+            ...(email ? { email } : {}),
+            ...(phone ? { phone } : {}),
+            password,
+          }),
           credentials: "include",
         });
 

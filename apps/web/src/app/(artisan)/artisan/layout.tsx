@@ -18,7 +18,8 @@ export default function ArtisanLayout({ children }: { children: React.ReactNode 
     hydrate();
   }, [hydrate]);
 
-  const isAuthPage = AUTH_ROUTES.includes(pathname);
+  const path = pathname ?? "";
+  const isAuthPage = AUTH_ROUTES.includes(path);
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -28,7 +29,7 @@ export default function ArtisanLayout({ children }: { children: React.ReactNode 
     <div className="flex min-h-screen bg-[#EDE8DF]">
       <ArtisanSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <ArtisanTopbar pathname={pathname} onMenuClick={() => setSidebarOpen(true)} />
+        <ArtisanTopbar pathname={path} onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-6 md:p-7">{children}</main>
       </div>
     </div>

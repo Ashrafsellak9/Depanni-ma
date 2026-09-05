@@ -23,7 +23,7 @@ Variables :
 | `EXPO_PUBLIC_API_URL` | API (ex. `http://192.168.x.x:4000` sur appareil physique) |
 | `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | Clé Maps (Android/iOS) |
 
-Compte seed : `fatima@example.ma` / `Depanni@2026!`
+Compte seed : `fatima@example.ma` / voir `SEED_PASSWORD` dans `apps/api/prisma/seed.credentials.ts`
 
 ## Structure `app/`
 

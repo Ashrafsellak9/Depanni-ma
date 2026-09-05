@@ -19,6 +19,29 @@ export async function loginAdmin(email: string, password: string) {
   return unwrap<{ user: { id: string; email: string; phone: string; role: string }; accessToken: string }>(res);
 }
 
+export async function fetchLoginStats() {
+  const res = await api.get("/admin/login-stats");
+  return unwrap<{
+    activeArtisans: number;
+    averageRating: number;
+    avgResponseMinutes: number | null;
+  }>(res);
+}
+
+export async function forgotAdminPassword(email: string) {
+  const res = await api.post("/auth/forgot-password", { email });
+  return unwrap<{ message: string; devOtp?: string }>(res);
+}
+
+export async function resetAdminPassword(input: {
+  email: string;
+  code: string;
+  password: string;
+}) {
+  const res = await api.post("/auth/reset-password", input);
+  return unwrap<{ message: string }>(res);
+}
+
 export async function fetchOverview(): Promise<AdminOverview> {
   const res = await api.get("/admin/overview");
   return unwrap<AdminOverview>(res);
@@ -149,9 +172,9 @@ export async function resolveDispute(
 export async function fetchMissions(params?: {
   status?: string;
   search?: string;
-  page?: number;
+  cursor?: string;
   limit?: number;
-}): Promise<Paginated<import("@/types/admin").AdminMissionRow>> {
+}): Promise<CursorPaginated<import("@/types/admin").AdminMissionRow>> {
   const res = await api.get("/admin/missions", { params });
   return unwrap(res);
 }
@@ -161,9 +184,18 @@ export async function fetchMission(id: string) {
   return unwrap<Record<string, unknown>>(res);
 }
 
-export async function fetchClients(page = 1) {
-  const res = await api.get("/admin/clients", { params: { page } });
-  return unwrap<Paginated<Record<string, unknown>>>(res);
+export async function fetchClients(cursor?: string, limit = 50) {
+  const res = await api.get("/admin/clients", { params: { cursor, limit } });
+  return unwrap<
+    CursorPaginated<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      createdAt: string;
+      user: { email: string; phone: string; isVerified: boolean; createdAt: string };
+      _count: { jobs: number };
+    }>
+  >(res);
 }
 
 export async function fetchAnalytics(params: PeriodParams): Promise<AnalyticsDashboard> {

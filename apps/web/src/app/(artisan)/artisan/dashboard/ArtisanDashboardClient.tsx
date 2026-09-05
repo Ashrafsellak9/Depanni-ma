@@ -6,6 +6,7 @@ import { AvailabilityToggle } from "@/app/(artisan)/artisan/dashboard/components
 import { RecentMissions } from "@/app/(artisan)/artisan/dashboard/components/RecentMissions";
 import { StatsCards } from "@/app/(artisan)/artisan/dashboard/components/StatsCards";
 import { Button } from "@/components/ui/button";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { useArtisanEarnings } from "@/hooks/artisan/useArtisanEarnings";
 import { useArtisanMissions } from "@/hooks/artisan/useArtisanMissions";
 import { useArtisanProfile } from "@/hooks/artisan/useArtisanProfile";
@@ -23,9 +24,9 @@ export function ArtisanDashboardClient() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">
-            Bonjour {profile?.firstName ?? "Artisan"} 👋
-          </h1>
+          <DisplayTitle as="h1" size="sm" className="text-2xl">
+            Bonjour {profile?.firstName ?? "Artisan"}
+          </DisplayTitle>
           <p className="text-muted-foreground">Votre activité du jour</p>
         </div>
         <Button asChild variant="outline">
@@ -47,7 +48,9 @@ export function ArtisanDashboardClient() {
       />
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-navy">Missions récentes</h2>
+        <DisplayTitle as="h2" size="sm" className="mb-4 text-lg font-semibold">
+          Missions récentes
+        </DisplayTitle>
         <RecentMissions missions={missions?.items} isLoading={missionsLoading} />
       </section>
     </div>

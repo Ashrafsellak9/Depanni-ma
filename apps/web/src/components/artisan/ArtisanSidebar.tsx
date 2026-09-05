@@ -39,10 +39,10 @@ export function ArtisanSidebar({
             <Wrench size={17} className="text-white" />
           </div>
           <div>
-            <div className="font-syne text-[17px] font-extrabold tracking-[-0.5px] text-white">
+            <div className="font-display text-[17px] font-extrabold tracking-[-0.5px] text-white">
               DEPANNI<span className="text-orange">.ma</span>
             </div>
-            <div className="font-dm text-[9px] uppercase tracking-[1px] text-white/30">
+            <div className="font-sans text-[9px] uppercase tracking-[1px] text-white/30">
               Espace artisan
             </div>
           </div>

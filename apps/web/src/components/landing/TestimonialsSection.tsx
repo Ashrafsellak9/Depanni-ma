@@ -1,78 +1,112 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { SectionTag } from "@/components/landing/SectionTag";
+import { InitialAvatar } from "@/components/landing/ui/InitialAvatar";
+import { StarRow } from "@/components/landing/ui/StarRow";
 import { fadeInUp, viewportOnce } from "@/components/landing/motion";
+import { Accent, DisplayTitle } from "@/components/ui/display-title";
 
 const TESTIMONIALS = [
   {
     quote:
-      "Fuite d'eau un dimanche soir — trois offres en 10 minutes, plombier arrivé en 25 min. Impeccable.",
+      "Fuite d'eau un dimanche soir, j'ai décrit le problème en deux minutes. Trois offres reçues en moins de 10 minutes et le plombier est arrivé en 25 minutes. Travail propre et tarif annoncé respecté.",
     name: "Sanae M.",
     role: "Citoyenne · Hay Salam",
     initials: "SM",
-    gradient: "from-navy to-navy-2",
+    service: "Plomberie",
+    date: "il y a 2 semaines",
+    offset: false,
   },
   {
     quote:
-      "DEPANNI m'a apporté 40 missions ce mois-ci. Paiements clairs, zéro paperasse.",
+      "Panne de courant générale un jeudi matin. L'électricien a accepté mon offre en 5 minutes et tout était réparé avant midi. Le paiement sécurisé après validation, c'est vraiment rassurant.",
     name: "Khalid A.",
-    role: "Plombier certifié",
+    role: "Citoyen · Quartier Saada",
     initials: "KA",
-    gradient: "from-orange to-orange-2",
+    service: "Électricité",
+    date: "il y a 1 mois",
+    offset: true,
   },
   {
     quote:
-      "Le suivi GPS et le chat rassurent toute la famille. On sait exactement quand l'artisan arrive.",
+      "Porte claquée avec les clés à l'intérieur, le serrurier est intervenu en moins de 20 minutes. Le suivi GPS et le chat rassurent toute la famille : on sait exactement quand l'artisan arrive.",
     name: "Youssef B.",
     role: "Citoyen · Centre-ville",
     initials: "YB",
-    gradient: "from-green to-emerald-600",
+    service: "Serrurerie",
+    date: "il y a 3 semaines",
+    offset: false,
   },
 ];
 
 export function TestimonialsSection() {
+  const reduced = useReducedMotion();
+
   return (
-    <section className="bg-cream py-24 md:py-28">
-      <div className="container mx-auto px-4">
+    <section className="bg-paper py-24 md:py-32">
+      <div className="landing-container">
         <div className="mb-14 text-center">
           <SectionTag>Témoignages</SectionTag>
-          <h2 className="mt-4 font-syne text-[32px] font-extrabold tracking-tight2 text-navy md:text-[44px]">
-            Ils nous font confiance
-          </h2>
+          <DisplayTitle as="h2" size="display-2" className="mt-4">
+            Ils nous font <Accent>confiance</Accent>
+          </DisplayTitle>
         </div>
 
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
-          variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
-          className="grid gap-6 md:grid-cols-3"
+          variants={{ visible: { transition: { staggerChildren: reduced ? 0 : 0.12 } } }}
+          className="grid items-start gap-6 md:grid-cols-3"
         >
           {TESTIMONIALS.map((t) => (
             <motion.article
               key={t.name}
               variants={fadeInUp}
-              className="flex flex-col rounded-[20px] border border-dep-border bg-white p-8"
+              className={`relative overflow-hidden rounded-2xl border border-line/60 bg-paper p-8 shadow-card ${
+                t.offset ? "md:mt-6" : ""
+              }`}
             >
-              <p className="text-orange">★★★★★</p>
-              <blockquote className="mt-4 flex-1 text-base italic leading-relaxed text-navy/90">
-                &ldquo;{t.quote}&rdquo;
+              <span
+                className="pointer-events-none absolute right-4 top-2 font-display text-display-2 text-rust/20"
+                aria-hidden
+              >
+                «
+              </span>
+              <div className="relative flex items-center justify-between">
+                <StarRow />
+                <span className="rounded-full bg-paper-2 px-3 py-1 text-xs font-medium text-ink">
+                  {t.service}
+                </span>
+              </div>
+              <blockquote className="relative mt-4 flex-1 font-display text-lg italic leading-relaxed text-ink/85">
+                {t.quote}
               </blockquote>
-              <div className="mt-6 flex items-center gap-3 border-t border-dep-border pt-6">
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ${t.gradient}`}
-                >
-                  {t.initials}
+              <div className="relative mt-6 flex items-center gap-3 border-t border-line/60 pt-6">
+                <InitialAvatar initials={t.initials} className="h-11 w-11" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-ink">{t.name}</p>
+                  <p className="text-sm text-ink/60">{t.role}</p>
                 </div>
-                <div>
-                  <p className="font-semibold text-navy">{t.name}</p>
-                  <p className="text-sm text-dep-gray">{t.role}</p>
-                </div>
+                <p className="shrink-0 text-xs text-ink/50">{t.date}</p>
               </div>
             </motion.article>
           ))}
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          variants={fadeInUp}
+          className="mt-10 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-6"
+        >
+          <p className="text-sm text-ink/60">
+            <span className="font-mono tabular-nums text-ink">4,8/5</span>
+            <span className="text-ink/60"> sur +300 avis</span>
+          </p>
         </motion.div>
       </div>
     </section>

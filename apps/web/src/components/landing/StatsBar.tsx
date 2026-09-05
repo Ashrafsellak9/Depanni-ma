@@ -1,79 +1,126 @@
 "use client";
 
-import { motion, useInView, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { BadgeCheck, Headphones, RefreshCw, Shield } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import { viewportOnce } from "@/components/landing/motion";
+import { AnimatedStat } from "@/components/landing/ui/AnimatedStat";
+import { cn } from "@/lib/utils";
 
-interface StatItem {
-  value: number;
-  suffix: string;
-  accent?: string;
-  label: string;
-  decimals?: number;
-}
-
-const STATS: StatItem[] = [
-  { value: 1200, suffix: "+", label: "clients satisfaits", accent: "+" },
-  { value: 280, suffix: "+", label: "artisans vérifiés" },
-  { value: 4.8, suffix: "/5", label: "note moyenne", decimals: 1 },
-  { value: 8, suffix: "min", label: "première offre", accent: "<" },
+const STATS = [
+  {
+    render: () => (
+      <>
+        <span className="text-rust">+</span>
+        <AnimatedStat value={1200} />
+      </>
+    ),
+    label: "clients satisfaits",
+  },
+  {
+    render: () => (
+      <>
+        <AnimatedStat value={280} />
+        <span className="text-rust">+</span>
+      </>
+    ),
+    label: "artisans vérifiés",
+  },
+  {
+    render: () => (
+      <>
+        <AnimatedStat value={4.8} decimals={1} />
+        <span className="text-rust">/5</span>
+      </>
+    ),
+    label: "note moyenne",
+  },
+  {
+    render: () => (
+      <>
+        <span className="text-rust">&lt;</span> <AnimatedStat value={8} />
+        {" min"}
+      </>
+    ),
+    label: "première offre",
+  },
 ];
 
-function AnimatedNumber({
-  value,
-  suffix,
-  accent,
-  decimals = 0,
-}: {
-  value: number;
-  suffix: string;
-  accent?: string;
-  decimals?: number;
-}) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, viewportOnce);
-  const motionValue = useMotionValue(0);
-  const spring = useSpring(motionValue, { duration: 1800, bounce: 0 });
-  const display = useTransform(spring, (v) =>
-    decimals > 0 ? v.toFixed(decimals) : Math.floor(v).toLocaleString("fr-FR"),
-  );
-
-  useEffect(() => {
-    if (inView) motionValue.set(value);
-  }, [inView, motionValue, value]);
-
-  return (
-    <span ref={ref} className="font-syne text-[32px] font-extrabold leading-none text-white md:text-5xl">
-      {accent && <span className="text-orange">{accent}</span>}
-      <motion.span>{display}</motion.span>
-      <span className="text-orange">{suffix}</span>
-    </span>
-  );
-}
+const GUARANTEES: { icon: LucideIcon; title: string; subtitle: string }[] = [
+  {
+    icon: Shield,
+    title: "Paiement sécurisé",
+    subtitle: "CMI · Visa · Mastercard",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Artisans vérifiés",
+    subtitle: "Identité et compétences contrôlées",
+  },
+  {
+    icon: RefreshCw,
+    title: "Satisfait, sinon on revient",
+    subtitle: "Nouvelle intervention gratuite si besoin",
+  },
+  {
+    icon: Headphones,
+    title: "Support 7 j/7",
+    subtitle: "Une équipe à votre écoute",
+  },
+];
 
 export function StatsBar() {
   return (
-    <section className="bg-navy py-14 md:py-16">
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={viewportOnce}
-        transition={{ duration: 0.6 }}
-        className="container mx-auto grid grid-cols-2 gap-8 px-4 md:grid-cols-4 md:gap-6"
-      >
-        {STATS.map((stat) => (
-          <div key={stat.label} className="text-center md:text-left">
-            <AnimatedNumber
-              value={stat.value}
-              suffix={stat.suffix}
-              accent={stat.accent}
-              decimals={stat.decimals}
-            />
-            <p className="mt-2 text-sm text-white/50">{stat.label}</p>
+    <section className="grain-ink overflow-hidden bg-ink py-20 md:py-24">
+      <div className="landing-container relative z-10">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+            {STATS.map((stat) => (
+              <div
+                key={stat.label}
+                className={cn(
+                  "text-center md:text-left",
+                  "md:border-l md:border-white/10 md:pl-6 md:first:border-0 md:first:pl-0",
+                )}
+              >
+                <div className="font-mono text-4xl tracking-[-0.03em] text-white lg:text-5xl">
+                  {stat.render()}
+                </div>
+                <div className="mt-2 text-xs uppercase tracking-widest text-white/60">{stat.label}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </motion.div>
+
+          {/* TODO: brancher sur la vraie date de dernière mise à jour depuis la DB */}
+          <p className="mt-4 text-center font-mono text-xs uppercase tracking-widest text-white/40">
+            Données actualisées mensuellement · Septembre 2026
+          </p>
+
+          <div className="my-12 flex items-center gap-4">
+            <div className="h-px flex-1 bg-white/8" />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">
+              Nos engagements
+            </span>
+            <div className="h-px flex-1 bg-white/8" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+            {GUARANTEES.map((g) => (
+              <div
+                key={g.title}
+                className="flex items-start gap-4 rounded-2xl bg-white/[0.03] p-5 transition-colors duration-300 hover:bg-white/[0.05]"
+              >
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-rust/10">
+                  <g.icon className="size-5 text-rust" strokeWidth={1.75} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium leading-snug text-white">{g.title}</div>
+                  <div className="mt-1 text-xs leading-relaxed text-white/50">{g.subtitle}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

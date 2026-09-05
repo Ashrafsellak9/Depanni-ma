@@ -18,10 +18,15 @@ const ICONS: Record<string, LucideIcon> = {
   ClipboardCheck,
 };
 
-export function EarningsKpiStrip() {
+export function EarningsKpiStrip({
+  items,
+}: {
+  items?: typeof KPIS;
+}) {
+  const list = items ?? KPIS;
   return (
     <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {KPIS.map((kpi, i) => {
+      {list.map((kpi, i) => {
         const Icon = ICONS[kpi.icon] ?? TrendingUp;
         return (
           <motion.div
@@ -40,10 +45,10 @@ export function EarningsKpiStrip() {
                 <Icon size={16} style={{ color: kpi.iconColor }} />
               </div>
             </div>
-            <div className="mb-1.5 font-syne text-[28px] font-extrabold leading-none tracking-[-1px] text-navy">
+            <div className="mb-1.5 font-display text-[28px] font-extrabold leading-none tracking-[-1px] text-navy">
               {kpi.value}
               {kpi.suffix && (
-                <span className="ml-1 font-dm text-[14px] font-normal text-dep-gray">{kpi.suffix}</span>
+                <span className="ml-1 font-sans text-[14px] font-normal text-dep-gray">{kpi.suffix}</span>
               )}
             </div>
             <div

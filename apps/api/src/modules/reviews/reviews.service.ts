@@ -83,6 +83,30 @@ export class ReviewsService {
 
     return review;
   }
+
+  async listForArtisan(userId: string) {
+    const artisan = await prisma.artisan.findUnique({ where: { userId }, select: { id: true } });
+    if (!artisan) throw new ForbiddenError("Profil artisan requis");
+
+    return prisma.review.findMany({
+      where: { targetId: artisan.id, targetType: "ARTISAN" },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        author: {
+          select: {
+            citizen: { select: { firstName: true, lastName: true } },
+          },
+        },
+        mission: {
+          select: {
+            totalAmount: true,
+            job: { select: { title: true } },
+          },
+        },
+      },
+    });
+  }
 }
 
 export const reviewsService = new ReviewsService();

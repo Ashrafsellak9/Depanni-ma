@@ -1,121 +1,81 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { Star } from "lucide-react";
 
-const CATEGORIES = [
-  { icon: "🔧", label: "Plomberie", active: true },
-  { icon: "⚡", label: "Électricité", active: false },
-  { icon: "🔑", label: "Serrurerie", active: false },
-  { icon: "🚗", label: "Mécanique", active: false },
-  { icon: "🪟", label: "Vitrier", active: false },
-  { icon: "🎨", label: "Peinture", active: false },
-];
+import { AppHomeScreen } from "@/components/landing/ui/AppHomeScreen";
+import { PhoneFrame } from "@/components/landing/ui/PhoneFrame";
+import { cn } from "@/lib/utils";
 
 export function PhoneMockup() {
+  const reduced = useReducedMotion();
+
   return (
-    <div className="relative mx-auto w-max max-w-full overflow-visible px-[70px] py-6">
-      <div className="relative w-[280px] shrink-0">
+    <div className="relative mx-auto w-full max-w-[220px] overflow-visible px-2 py-8 sm:max-w-[240px] md:max-w-[250px] lg:max-w-[260px]">
+      <div
+        className="pointer-events-none absolute -right-16 top-1/2 -z-10 size-[420px] -translate-y-1/2 bg-rust/15 blur-3xl md:-right-10"
+        aria-hidden
+      />
+
+      <div
+        className="relative w-full min-w-0 lg:rotate-[-3deg]"
+        style={{ filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.12))" }}
+      >
         <motion.div
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-4 z-20 w-[188px] rounded-2xl border border-dep-border bg-white px-4 py-3 shadow-xl"
-          style={{ right: -60 }}
+          initial={reduced ? false : { opacity: 0, x: 20, y: -10 }}
+          animate={{ opacity: 1, x: 0, y: 0 }}
+          transition={reduced ? { duration: 0 } : { delay: 0.6, duration: 0.5 }}
+          className={cn(
+            "absolute -right-2 -top-3 z-20 w-[180px] rounded-2xl bg-white p-3 shadow-xl sm:-right-4 md:-right-8 md:w-[200px]",
+            !reduced && "animate-float [animation-delay:2s]",
+          )}
         >
-          <p className="text-xs font-medium leading-snug text-dep-gray">Artisans disponibles</p>
-          <p className="mt-0.5 font-syne text-[22px] font-extrabold leading-[1.15] tracking-tight text-navy">
-            <span className="text-orange">24</span>
-            <span className="block text-[15px] font-extrabold text-navy">près de vous</span>
-          </p>
-        </motion.div>
-
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-          className="absolute bottom-[60px] z-20 max-w-[220px] rounded-2xl border border-dep-border bg-white px-4 py-3 shadow-xl"
-          style={{ left: -70 }}
-        >
-          <p className="flex items-start gap-2 text-[13px] font-medium leading-snug text-navy">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green" />
-            </span>
-            Khalid arrive dans 12 min
-          </p>
-        </motion.div>
-
-        <div className="w-[280px] rounded-[40px] bg-[#0a0f18] p-3 shadow-[0_40px_100px_rgba(15,30,53,0.2)]">
-          <div className="flex aspect-[9/19] flex-col overflow-hidden rounded-[28px] bg-cream">
-            <div className="flex shrink-0 items-center justify-between px-4 pb-1.5 pt-2.5 text-[9px] font-medium text-navy/70">
-              <span>9:41</span>
-              <div className="flex gap-0.5">
-                <span className="h-1.5 w-1.5 rounded-sm bg-navy/80" />
-                <span className="h-1.5 w-1.5 rounded-sm bg-navy/80" />
-                <span className="h-1.5 w-1.5 rounded-sm bg-navy/50" />
-              </div>
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-avatar-2">
+              <span className="font-display text-sm font-semibold text-ink">K</span>
             </div>
-
-            <div className="flex shrink-0 items-center justify-between border-b border-dep-border/60 px-3.5 pb-2.5">
-              <span className="font-syne text-[11px] font-extrabold text-navy">
-                DEPANNI<span className="text-orange">.ma</span>
-              </span>
-              <span className="relative text-base leading-none">
-                🔔
-                <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange text-[8px] font-bold text-white">
-                  2
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-1">
+                <div className="size-1.5 rounded-full bg-success animate-pulse" />
+                <span className="text-[10px] font-medium uppercase tracking-widest text-success">
+                  En route
                 </span>
-              </span>
-            </div>
-
-            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-3.5 pb-3.5 pt-2.5">
-              <p className="text-[10px] text-dep-gray">Bonjour, Mohammed 👋</p>
-              <p className="font-syne text-[13px] font-extrabold leading-tight text-navy">
-                De quoi avez-vous besoin ?
-              </p>
-
-              <div className="rounded-lg border border-dep-border bg-white px-2.5 py-2 text-[10px] text-dep-gray">
-                Décrire votre problème...
               </div>
-
-              <div className="grid grid-cols-3 gap-1.5">
-                {CATEGORIES.map((cat) => (
-                  <div
-                    key={cat.label}
-                    className={`flex h-[72px] w-full flex-col items-center justify-center rounded-xl text-center ${
-                      cat.active
-                        ? "bg-[#0F1E35] text-white"
-                        : "border border-dep-border bg-white text-navy"
-                    }`}
-                  >
-                    <span className="text-xl leading-none">{cat.icon}</span>
-                    <span className="mt-1 text-[9px] font-medium leading-tight">{cat.label}</span>
-                  </div>
-                ))}
+              <div className="text-sm font-medium leading-snug text-ink">
+                Khalid a accepté votre demande
               </div>
-
-              <div className="flex items-center gap-1.5 rounded-lg bg-orange/10 px-2.5 py-1.5">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-orange" />
-                </span>
-                <p className="text-[9px] leading-snug text-navy">
-                  3 plombiers disponibles à moins de 2 km
-                </p>
-              </div>
-
-              <div className="mt-auto flex items-center gap-2 rounded-lg border border-dep-border bg-white p-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-navy to-navy-2 text-[10px] font-bold text-white">
-                  KA
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[10px] font-semibold text-navy">Khalid Amrani</p>
-                  <p className="text-[9px] text-dep-gray">1.2 km · 12 min</p>
-                  <p className="text-[9px] text-amber-500">★★★★★</p>
-                </div>
-                <p className="shrink-0 font-syne text-xs font-extrabold text-orange">150 MAD</p>
-              </div>
+              <div className="mt-1 font-mono text-xs text-ink/50">Il y a 12 secondes</div>
             </div>
           </div>
-        </div>
+        </motion.div>
+
+        <motion.div
+          initial={reduced ? false : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={reduced ? { duration: 0 } : { delay: 1, duration: 0.5 }}
+          className={cn(
+            "absolute -bottom-6 left-0 z-10 max-w-[180px] rounded-2xl bg-white p-3 shadow-card sm:-left-6 md:max-w-[200px]",
+            !reduced && "animate-float",
+          )}
+        >
+          <div className="mb-2 text-[10px] font-medium uppercase tracking-widest text-ink/65">
+            Note globale
+          </div>
+          <div className="mb-1 flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Star key={i} className="size-4 fill-rust text-rust" aria-hidden />
+            ))}
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-ink">4,9</span>
+            <span className="text-sm text-ink/60">/ 5</span>
+            <span className="ml-auto text-sm text-ink/60">847 avis</span>
+          </div>
+        </motion.div>
+
+        <PhoneFrame>
+          <AppHomeScreen />
+        </PhoneFrame>
       </div>
     </div>
   );

@@ -1,10 +1,17 @@
 import { createHash, randomInt } from "node:crypto";
 
 import { env } from "../../config/env.js";
+import { isOtpDevMode } from "../../config/otpDev.js";
 import { getRedis } from "../../config/redis.js";
 import { AppError, ValidationError } from "../../utils/errors.js";
+import { logger } from "../../utils/logger.js";
 import { notificationsService } from "../notifications/notifications.service.js";
 import type { OtpPurpose } from "./auth.schemas.js";
+
+export type OtpSendResult = {
+  /** Code OTP en clair — uniquement si isOtpDevMode(). */
+  devOtp?: string;
+};
 
 function otpKey(purpose: OtpPurpose, phone: string): string {
   return `otp:${purpose}:${phone}`;
@@ -42,7 +49,7 @@ export class OtpService {
     }
   }
 
-  async send(phone: string, purpose: OtpPurpose, locale = "fr"): Promise<void> {
+  async send(phone: string, purpose: OtpPurpose, locale = "fr"): Promise<OtpSendResult> {
     await this.assertNotLocked(phone);
 
     const redis = getRedis();
@@ -54,6 +61,13 @@ export class OtpService {
 
     const body = buildSmsBody(code, locale);
     await notificationsService.sendOtpSms(phone, body);
+
+    if (isOtpDevMode()) {
+      logger.warn("OTP_DEV_CODE (Twilio absent)", { phone, purpose, code });
+      return { devOtp: code };
+    }
+
+    return {};
   }
 
   async verify(phone: string, purpose: OtpPurpose, code: string): Promise<void> {

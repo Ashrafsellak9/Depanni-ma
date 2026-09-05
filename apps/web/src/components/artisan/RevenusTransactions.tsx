@@ -5,6 +5,7 @@ import { Building2, ChevronDown, CreditCard, Download, Wrench } from "lucide-rea
 
 import type { RevenusTransaction } from "@/components/artisan/artisanRevenusMock";
 import { TRANSACTIONS } from "@/components/artisan/artisanRevenusMock";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 const VISIBLE_INITIAL = 5;
 
@@ -16,13 +17,18 @@ function filterByType(tx: RevenusTransaction, typeFilter: string) {
   return true;
 }
 
-export function RevenusTransactions() {
+export function RevenusTransactions({
+  transactions,
+}: {
+  transactions?: RevenusTransaction[];
+}) {
+  const source = transactions ?? TRANSACTIONS;
   const [typeFilter, setTypeFilter] = useState("all");
   const [visibleCount, setVisibleCount] = useState(VISIBLE_INITIAL);
 
   const filtered = useMemo(
-    () => TRANSACTIONS.filter((tx) => filterByType(tx, typeFilter)),
-    [typeFilter],
+    () => source.filter((tx) => filterByType(tx, typeFilter)),
+    [source, typeFilter],
   );
 
   const visible = filtered.slice(0, visibleCount);
@@ -31,7 +37,9 @@ export function RevenusTransactions() {
   return (
     <div className="rounded-2xl border border-dep-border bg-white p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-[15px] font-semibold text-navy">Historique des transactions</h3>
+        <DisplayTitle as="h3" size="sm" className="text-[15px] font-semibold">
+          Historique des transactions
+        </DisplayTitle>
         <div className="flex flex-wrap gap-2">
           <select
             value={typeFilter}
@@ -121,7 +129,7 @@ function TransactionRow({ tx }: { tx: RevenusTransaction }) {
       )}
 
       <div
-        className={`shrink-0 font-syne text-[16px] font-bold ${
+        className={`shrink-0 font-display text-[16px] font-bold ${
           tx.amount > 0 ? "text-green" : "text-dep-red"
         }`}
       >

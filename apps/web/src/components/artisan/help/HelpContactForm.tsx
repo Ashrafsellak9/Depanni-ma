@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle, Send, Shield } from "lucide-react";
 
+import { DisplayTitle } from "@/components/ui/display-title";
+
 export function HelpContactForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -25,9 +27,9 @@ export function HelpContactForm() {
           <Send size={16} className="text-[#F05A1A]" />
         </div>
         <div>
-          <h3 className="text-[14px] font-semibold text-[#0F1E35]">
-            Vous n&apos;avez pas trouvé la réponse ?
-          </h3>
+          <DisplayTitle as="h3" size="sm" className="text-[14px] font-semibold">
+            Vous n&apos;avez pas trouvé la réponse&nbsp;?
+          </DisplayTitle>
           <p className="text-[12px] text-[#6B7280]">Envoyez-nous un message, réponse sous 2h</p>
         </div>
       </div>
@@ -65,7 +67,7 @@ export function HelpContactForm() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Décrivez votre problème en détail..."
-          className="h-28 w-full resize-none rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-3.5 font-['DM_Sans'] text-[13px] outline-none transition-all focus:border-[#0F1E35] focus:bg-white"
+          className="h-28 w-full resize-none rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-3.5 font-sans text-[13px] outline-none transition-all focus:border-[#0F1E35] focus:bg-white"
         />
       </div>
 

@@ -3,13 +3,14 @@
 import { Play } from "lucide-react";
 
 import { VIDEO_TUTORIALS } from "@/components/artisan/help/artisanHelpData";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 export function HelpVideoTutorials() {
   return (
     <div className="mb-6">
-      <h2 className="mb-3 font-['Syne'] text-[16px] font-bold text-[#0F1E35]">
+      <DisplayTitle as="h2" size="sm" className="mb-3 text-[16px]">
         Tutoriels vidéo
-      </h2>
+      </DisplayTitle>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {VIDEO_TUTORIALS.map((v) => (
           <button

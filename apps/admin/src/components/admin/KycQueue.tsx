@@ -30,7 +30,30 @@ const KYC_ARTISANS = [
   },
 ];
 
-export function KycQueue() {
+export type KycQueueItem = {
+  id?: string;
+  initials: string;
+  bg?: string;
+  gradient?: string;
+  name: string;
+  spec: string;
+  docs: string;
+  complete: boolean;
+};
+
+export function KycQueue({
+  items,
+  pendingCount,
+  onApprove,
+  onReject,
+}: {
+  items?: KycQueueItem[];
+  pendingCount?: number;
+  onApprove?: (id: string) => void;
+  onReject?: (id: string) => void;
+}) {
+  const list = items ?? KYC_ARTISANS;
+  const count = pendingCount ?? list.length;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -41,21 +64,29 @@ export function KycQueue() {
       <div className="flex items-center justify-between border-b border-[#E5E0D8] px-5 py-4">
         <h2 className="text-sm font-semibold text-navy">KYC Artisans en attente</h2>
         <span className="rounded-full bg-[#F05A1A] px-2 py-0.5 text-[10px] font-bold text-white">
-          7
+          {count}
         </span>
       </div>
       <div className="p-4">
-        {KYC_ARTISANS.length === 0 ? (
+        {list.length === 0 ? (
           <p className="py-6 text-center text-sm text-[#6B7280]">Aucune donnée</p>
         ) : (
-          KYC_ARTISANS.map((item) => (
+          list.map((item) => (
             <div
-              key={item.name}
+              key={item.id ?? item.name}
               className="mb-2 flex items-center gap-2.5 rounded-xl border border-[#E5E0D8] bg-[#F4F0E8] p-3"
             >
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-sm font-bold text-white"
-                style={{ background: item.bg }}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-sm font-bold text-white ${
+                  item.gradient && !item.bg ? `bg-gradient-to-br ${item.gradient}` : ""
+                }`}
+                style={
+                  item.bg
+                    ? { background: item.bg }
+                    : item.gradient
+                      ? undefined
+                      : { background: "linear-gradient(135deg, #F05A1A, #FF7A3D)" }
+                }
               >
                 {item.initials}
               </div>
@@ -68,12 +99,14 @@ export function KycQueue() {
               <div className="flex shrink-0 gap-1.5">
                 <button
                   type="button"
+                  onClick={() => item.id && onApprove?.(item.id)}
                   className="rounded-lg bg-[#1B8A4E] px-3 py-1.5 text-[11px] font-semibold text-white"
                 >
                   ✓
                 </button>
                 <button
                   type="button"
+                  onClick={() => item.id && onReject?.(item.id)}
                   className="rounded-lg border border-[rgba(220,38,38,0.2)] bg-[rgba(220,38,38,0.08)] px-3 py-1.5 text-[11px] font-semibold text-[#DC2626]"
                 >
                   ✕
@@ -86,7 +119,7 @@ export function KycQueue() {
           href="/admin/kyc"
           className="mt-2 block cursor-pointer text-center text-[12px] text-[#F05A1A] hover:underline"
         >
-          Voir les 4 autres →
+          Voir la file KYC →
         </Link>
       </div>
     </motion.div>

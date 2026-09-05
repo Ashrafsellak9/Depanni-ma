@@ -17,6 +17,10 @@ export class AdminController {
     sendSuccess(res, await adminService.getOverview());
   };
 
+  loginStats = async (_req: Request, res: Response): Promise<void> => {
+    sendSuccess(res, await adminService.getLoginStats());
+  };
+
   listMissions = async (req: Request, res: Response): Promise<void> => {
     sendSuccess(
       res,

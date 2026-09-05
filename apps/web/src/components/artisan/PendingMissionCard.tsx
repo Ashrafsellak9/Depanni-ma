@@ -135,7 +135,7 @@ export function PendingMissionCard({ mission, onPropose, onSkip }: PendingMissio
         </div>
         <div className="text-right">
           <div className="text-[12px] text-white/40">Budget estimé</div>
-          <div className="font-syne text-lg font-bold text-orange">{mission.budget}</div>
+          <div className="font-display text-lg font-bold text-orange">{mission.budget}</div>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ export function PendingMissionCard({ mission, onPropose, onSkip }: PendingMissio
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[11px] text-white/40">Expire dans</span>
           <span
-            className={`font-syne text-[13px] font-bold ${
+            className={`font-display text-[13px] font-bold ${
               timeLeft < 60 ? "text-dep-red" : "text-orange"
             }`}
           >

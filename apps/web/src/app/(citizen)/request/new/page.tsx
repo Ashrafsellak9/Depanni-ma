@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { RequestWizard } from "@/app/(citizen)/request/new/components/RequestWizard";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata = { title: "Nouvelle demande" };
@@ -8,7 +9,9 @@ export const metadata = { title: "Nouvelle demande" };
 export default function NewRequestPage() {
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-navy">Nouvelle demande</h1>
+      <DisplayTitle as="h1" size="sm" className="text-2xl">
+        Nouvelle demande
+      </DisplayTitle>
       <p className="mt-2 text-muted-foreground">
         Décrivez votre besoin en quelques étapes — les artisans proches seront notifiés.
       </p>

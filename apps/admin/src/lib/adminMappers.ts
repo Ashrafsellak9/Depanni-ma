@@ -71,7 +71,7 @@ export function mapOverviewMission(row: AdminMissionRow): OverviewMission {
     avatar: initials(row.citizen.firstName, row.citizen.lastName),
     avatarColor: avatarColor(client),
     service: row.job.title,
-    serviceEmoji: "",
+    serviceEmoji: serviceEmoji(row.job.title),
     artisan,
     amount: formatMadSpaced(row.totalAmount),
     status: mapMissionStatus(row.status),
@@ -217,6 +217,44 @@ export function buildAlertMessage(kpis: AdminKpis): string | null {
   }
   if (parts.length === 0) return null;
   return parts.join(" · ");
+}
+
+const SERVICE_EMOJI: Record<string, string> = {
+  plomberie: "🔧",
+  electricite: "⚡",
+  serrurerie: "🔑",
+  peinture: "🎨",
+  mecanique: "🚗",
+  climatisation: "❄️",
+  menage: "🧹",
+};
+
+export function serviceEmoji(label: string): string {
+  const key = label.toLowerCase();
+  for (const [slug, emoji] of Object.entries(SERVICE_EMOJI)) {
+    if (key.includes(slug) || key.includes(slug.replace("electricite", "électri"))) {
+      return emoji;
+    }
+  }
+  return "🛠️";
+}
+
+export function periodFromDate(iso: string): "today" | "yesterday" | "week" | "older" {
+  const d = new Date(iso);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startYest = new Date(startToday);
+  startYest.setDate(startYest.getDate() - 1);
+  const startWeek = new Date(startToday);
+  startWeek.setDate(startWeek.getDate() - 7);
+  if (d >= startToday) return "today";
+  if (d >= startYest) return "yesterday";
+  if (d >= startWeek) return "week";
+  return "older";
+}
+
+export function formatRelativeFr(iso: string): string {
+  return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: fr });
 }
 
 export function mergeOverviewMissions(overview: AdminOverview): OverviewMission[] {

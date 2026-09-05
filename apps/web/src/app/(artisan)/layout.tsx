@@ -1,3 +1,5 @@
+import { GoogleMapProvider } from "@/components/maps/GoogleMapProvider";
+
 export default function ArtisanGroupLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <GoogleMapProvider>{children}</GoogleMapProvider>;
 }

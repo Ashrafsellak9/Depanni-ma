@@ -4,6 +4,7 @@ import cors from "cors";
 import express, { type Express } from "express";
 
 import { corsOrigins } from "./config/env.js";
+import { getLocalUploadRoot, isLocalStorageEnabled } from "./config/localStorage.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { httpLogger } from "./middleware/logger.js";
 import { globalLimiter } from "./middleware/rateLimiter.js";
@@ -30,6 +31,7 @@ import {
   walletRoutes,
 } from "./modules/payments/payments.routes.js";
 import { paymentsCmiRouter } from "./modules/payments/payments.webhook.js";
+import { reviewsRoutes } from "./modules/reviews/reviews.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 import { apiRouter } from "./routes/index.js";
 
@@ -69,6 +71,11 @@ export function createApp(): Express {
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
   app.use(sanitizeInput);
 
+  // Stockage local (dev/test) quand S3/R2 n'est pas configuré
+  if (isLocalStorageEnabled()) {
+    app.use("/uploads", express.static(getLocalUploadRoot()));
+  }
+
   app.use("/api/auth", authRoutes);
   app.use("/api/v1/auth", authRoutes);
 
@@ -90,6 +97,8 @@ export function createApp(): Express {
   app.use("/api/v1/chat", chatRoutes);
   app.use("/api/tracking", trackingRoutes);
   app.use("/api/v1/tracking", trackingRoutes);
+  app.use("/api/reviews", reviewsRoutes);
+  app.use("/api/v1/reviews", reviewsRoutes);
 
   app.use("/api/v1", apiRouter);
 

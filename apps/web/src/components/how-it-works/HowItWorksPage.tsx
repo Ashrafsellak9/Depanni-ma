@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
   Clock,
@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 
+import { AudienceTabs } from "@/components/how-it-works/AudienceTabs";
 import { HowItWorksFaq } from "@/components/how-it-works/HowItWorksFaq";
 import { HowItWorksSteps } from "@/components/how-it-works/HowItWorksSteps";
 import {
@@ -22,6 +23,8 @@ import {
   type Audience,
 } from "@/components/how-it-works/howItWorksData";
 import { SectionTag } from "@/components/landing/SectionTag";
+import { RequestCta } from "@/components/landing/ui/RequestCta";
+import { Accent, DisplayTitle } from "@/components/ui/display-title";
 import { AUTH_ROUTES } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +42,7 @@ const GUARANTEES = [
     icon: "Shield",
     title: "Paiement sécurisé",
     desc: "Votre argent est bloqué jusqu'à votre validation. Remboursement intégral si l'artisan ne se présente pas.",
-    color: "green" as const,
+    color: "orange" as const,
   },
   {
     icon: "BadgeCheck",
@@ -57,131 +60,125 @@ const GUARANTEES = [
     icon: "Clock",
     title: "Prix annoncé à l'avance",
     desc: "Le prix est fixé AVANT l'intervention. Aucune mauvaise surprise à la facture.",
-    color: "orange" as const,
+    color: "navy" as const,
   },
   {
     icon: "Headphones",
     title: "Support 7j/7",
     desc: "Notre équipe est disponible par WhatsApp et email pour tout litige ou problème.",
-    color: "navy" as const,
+    color: "orange" as const,
   },
   {
     icon: "RefreshCw",
     title: "Remboursement garanti",
     desc: "Si vous n'êtes pas satisfait du travail effectué, nous vous remboursons ou trouvons un autre artisan.",
-    color: "green" as const,
+    color: "navy" as const,
   },
 ];
 
-function iconColorClass(color: "green" | "navy" | "orange") {
-  if (color === "green") return "text-green";
-  if (color === "navy") return "text-navy";
-  return "text-orange";
+function iconColorClass(color: "navy" | "orange") {
+  return color === "navy" ? "text-navy" : "text-orange";
 }
 
-function iconBgClass(color: "green" | "navy" | "orange") {
-  if (color === "green") return "bg-green/10";
-  if (color === "navy") return "bg-navy/[0.07]";
-  return "bg-orange/10";
+function iconBgClass(color: "navy" | "orange") {
+  return color === "navy" ? "bg-navy/[0.07]" : "bg-orange/10";
 }
 
 export function HowItWorksPage() {
   const [audience, setAudience] = useState<Audience>("client");
+  const reduceMotion = useReducedMotion();
   const steps = audience === "client" ? CLIENT_STEPS : ARTISAN_STEPS;
+
+  const panelMotion = reduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.25 },
+      };
 
   return (
     <>
-      <section className="border-b border-dep-border bg-cream pb-16 pt-8 text-center md:pt-12">
-        <div className="container mx-auto px-4">
+      <section className="scroll-mt-28 bg-paper pb-8 pt-8 text-center md:pt-12">
+        <div className="landing-container">
           <SectionTag>Comment ça marche</SectionTag>
 
-          <h1 className="mx-auto mb-4 mt-4 max-w-[600px] font-syne text-[38px] font-extrabold leading-[1.05] tracking-[-2px] text-navy md:text-[52px]">
-            Simple, rapide,
-            <br />
-            <span className="text-orange">transparent</span>
-          </h1>
+          <DisplayTitle as="h1" size="display-1" className="mx-auto mb-4 mt-4 max-w-[600px]">
+            Simple, rapide, <Accent>transparent</Accent>
+          </DisplayTitle>
 
-          <p className="mx-auto mb-8 max-w-[520px] text-[17px] font-light leading-[1.7] text-dep-gray md:text-[18px]">
-            De la demande à l&apos;intervention, DEPANNI.ma connecte les citoyens d&apos;El Jadida avec des
-            artisans vérifiés en quelques minutes.
+          <p className="mx-auto max-w-[52ch] text-lg leading-relaxed text-ink/70">
+            De la demande à l&apos;intervention, en moins de 15 minutes chrono. Voici comment ça
+            marche.
           </p>
 
-          <div className="mx-auto inline-flex max-w-full flex-wrap items-center justify-center gap-4 rounded-2xl border border-dep-border bg-white px-4 py-4 shadow-sm sm:gap-6 sm:px-8 md:flex-nowrap">
-            {HEADER_STATS.map((stat, i) => (
-              <div key={stat.label} className="flex items-center gap-4 sm:gap-6">
-                {i > 0 && <div className="hidden h-10 w-px bg-dep-border sm:block" />}
-                <div className="min-w-[72px] text-center">
-                  <div className="font-syne text-[20px] font-extrabold leading-none text-orange sm:text-[22px]">
-                    {stat.value}
+          <div className="mx-auto mt-12 max-w-4xl">
+            <div className="rounded-3xl border border-line bg-white p-8 shadow-[0_1px_0_rgba(11,27,43,0.04)] md:p-10">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+                {HEADER_STATS.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="text-center md:border-l md:border-line md:pl-6 md:text-left md:first:border-0 md:first:pl-0"
+                  >
+                    <div className="font-mono text-3xl tracking-[-0.02em] text-ink md:text-4xl">
+                      <span className="text-rust">{stat.value.replace(/[0-9,]/g, "")}</span>
+                      <span>{stat.value.replace(/[^0-9,]/g, "")}</span>
+                      <span className="text-rust">{stat.suffix}</span>
+                    </div>
+                    <div className="mt-2 text-xs uppercase tracking-widest text-ink/60">
+                      {stat.label}
+                    </div>
                   </div>
-                  <div className="mt-1 text-[10px] text-dep-gray sm:text-[11px]">{stat.label}</div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="flex justify-center bg-[#EDE8DF] py-10">
-        <div className="flex gap-1 rounded-2xl border border-dep-border bg-white p-1.5 shadow-sm">
-          <button
-            type="button"
-            onClick={() => setAudience("client")}
-            className={cn(
-              "rounded-xl px-5 py-2.5 text-[14px] font-semibold transition-all sm:px-6",
-              audience === "client"
-                ? "bg-navy text-white shadow-sm"
-                : "text-dep-gray hover:text-navy",
-            )}
-          >
-            👤 Je cherche un artisan
-          </button>
-          <button
-            type="button"
-            onClick={() => setAudience("artisan")}
-            className={cn(
-              "rounded-xl px-5 py-2.5 text-[14px] font-semibold transition-all sm:px-6",
-              audience === "artisan"
-                ? "bg-orange text-white shadow-sm"
-                : "text-dep-gray hover:text-navy",
-            )}
-          >
-            🔧 Je suis artisan
-          </button>
-        </div>
-      </div>
+      <AudienceTabs audience={audience} onChange={setAudience} />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={audience}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.25 }}
-        >
-          <HowItWorksSteps steps={steps} />
-        </motion.div>
-      </AnimatePresence>
+      <motion.div
+        key={audience}
+        role="tabpanel"
+        id={`panel-${audience}`}
+        aria-labelledby={`tab-${audience}`}
+        {...panelMotion}
+      >
+        <HowItWorksSteps steps={steps} audience={audience} />
+      </motion.div>
 
-      <section className="border-y border-dep-border bg-white py-16">
+      <section id="garanties" className="scroll-mt-28 border-y border-dep-border bg-white py-16">
         <div className="container mx-auto max-w-[900px] px-6">
-          <div className="mb-10 text-center">
-            <SectionTag>Nos garanties</SectionTag>
-            <h2 className="mt-4 font-syne text-[32px] font-extrabold tracking-[-1px] text-navy md:text-[36px]">
-              Vous êtes protégé à chaque étape
-            </h2>
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-ink/50">
+              Nos garanties
+            </p>
+            <DisplayTitle as="h2" size="display-2">
+              Vous êtes <Accent>protégé</Accent> à chaque étape
+            </DisplayTitle>
+            <p className="mx-auto mt-6 max-w-[52ch] text-lg text-ink/70">
+              De la publication de la demande jusqu&apos;au paiement final, DEPANNI garantit chaque
+              étape par des engagements concrets et vérifiables.
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {GUARANTEES.map((g, i) => {
               const Icon = GUARANTEE_ICONS[g.icon] ?? Shield;
+              const motionProps = reduceMotion
+                ? {}
+                : {
+                    initial: { opacity: 0, y: 16 },
+                    whileInView: { opacity: 1, y: 0 },
+                    viewport: { once: true },
+                    transition: { delay: i * 0.06, duration: 0.3 },
+                  };
+
               return (
                 <motion.div
                   key={g.title}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }}
-                  className="rounded-2xl border border-dep-border bg-cream p-6"
+                  {...motionProps}
+                  className="rounded-2xl border border-dep-border bg-cream p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-orange hover:shadow-md"
                 >
                   <div
                     className={cn(
@@ -189,10 +186,12 @@ export function HowItWorksPage() {
                       iconBgClass(g.color),
                     )}
                   >
-                    <Icon size={18} className={iconColorClass(g.color)} />
+                    <Icon className={cn("h-[18px] w-[18px]", iconColorClass(g.color))} aria-hidden />
                   </div>
-                  <h3 className="mb-2 font-syne text-[16px] font-bold text-navy">{g.title}</h3>
-                  <p className="text-[13px] leading-[1.6] text-dep-gray">{g.desc}</p>
+                  <DisplayTitle as="h3" size="display-3" className="mb-2 text-base tracking-normal">
+                    {g.title}
+                  </DisplayTitle>
+                  <p className="text-sm leading-relaxed text-dep-gray">{g.desc}</p>
                 </motion.div>
               );
             })}
@@ -203,26 +202,27 @@ export function HowItWorksPage() {
       <HowItWorksFaq />
 
       <section className="relative overflow-hidden bg-orange py-20 text-center">
-        <div className="pointer-events-none absolute right-[-80px] top-[-80px] h-[400px] w-[400px] rounded-full border border-white/[0.08]" />
-        <div className="pointer-events-none absolute bottom-[-60px] left-[-60px] h-[300px] w-[300px] rounded-full bg-black/[0.06]" />
+        <div className="pointer-events-none absolute -right-20 -top-20 h-[400px] w-[400px] rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-[300px] w-[300px] rounded-full bg-black/5" />
 
         <div className="container relative z-10 mx-auto px-4">
-          <h2 className="mb-4 font-syne text-[36px] font-extrabold leading-[1.05] tracking-[-2px] text-white md:text-[48px]">
-            Prêt à essayer ?
-          </h2>
-          <p className="mx-auto mb-8 max-w-[400px] text-[17px] font-light text-white/80">
-            Votre premier artisan à El Jadida, en moins de 10 minutes.
+          <DisplayTitle as="h2" size="display-1" className="mb-4 text-white">
+            Prêt à <Accent className="text-white">essayer</Accent>&nbsp;?
+          </DisplayTitle>
+          <p className="mx-auto mb-8 max-w-[400px] text-base font-light text-white/80 md:text-lg">
+            Votre premier artisan à El Jadida, en moins de 8 minutes.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              href={AUTH_ROUTES.newRequest}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-[15px] font-semibold text-orange transition-all hover:-translate-y-0.5 hover:shadow-xl"
+            <RequestCta
+              variant="white"
+              event="how-request"
+              className="min-h-[48px] px-8 py-4 text-sm font-semibold text-orange shadow-xl hover:-translate-y-0.5"
             >
-              🔧 Faire une demande
-            </Link>
+              Faire une demande
+            </RequestCta>
             <Link
               href={AUTH_ROUTES.artisanRegister}
-              className="inline-flex items-center gap-2 rounded-full border-2 border-white/50 px-8 py-4 text-[15px] font-medium text-white transition-all hover:border-white hover:bg-white/[0.08]"
+              className="inline-flex min-h-[48px] items-center gap-2 rounded-full border-2 border-white/50 px-8 py-4 text-sm font-medium text-white transition-all duration-200 hover:border-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-orange"
             >
               Devenir artisan →
             </Link>

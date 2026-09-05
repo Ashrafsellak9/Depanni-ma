@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJobOfferNotifications } from "@/hooks/citizen/useJobOfferNotifications";
+import { MissionCheckout } from "@/components/payments/MissionCheckout";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { useMissionDetail } from "@/hooks/citizen/useMissionDetail";
 
 export default function MissionDetailPage() {
@@ -75,7 +77,9 @@ export default function MissionDetailPage() {
               Historique
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold text-navy">{job.title}</h1>
+          <DisplayTitle as="h1" size="sm" className="text-2xl">
+            {job.title}
+          </DisplayTitle>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <JobStatusBadge status={job.status} />
             <span>{job.city}</span>
@@ -139,7 +143,9 @@ export default function MissionDetailPage() {
       )}
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-navy">Description</h2>
+        <DisplayTitle as="h2" size="sm" className="mb-3 text-lg font-semibold">
+          Description
+        </DisplayTitle>
         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{job.description}</p>
       </section>
 
@@ -147,7 +153,9 @@ export default function MissionDetailPage() {
 
       {showOffers && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-navy">Offres reçues</h2>
+          <DisplayTitle as="h2" size="sm" className="mb-3 text-lg font-semibold">
+            Offres reçues
+          </DisplayTitle>
           <OffersList
             jobId={job.id}
             offers={job.offers}
@@ -169,6 +177,14 @@ export default function MissionDetailPage() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {mission && mission.totalAmount > 0 && (
+        <MissionCheckout
+          jobId={job.id}
+          amount={mission.totalAmount}
+          enabled={["ACCEPTED", "IN_PROGRESS", "PENDING"].includes(mission.status)}
+        />
       )}
     </div>
   );

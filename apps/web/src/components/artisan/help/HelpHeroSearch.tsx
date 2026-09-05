@@ -3,6 +3,7 @@
 import { Search, X } from "lucide-react";
 
 import { POPULAR_SEARCHES } from "@/components/artisan/help/artisanHelpData";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 type HelpHeroSearchProps = {
   search: string;
@@ -19,9 +20,9 @@ export function HelpHeroSearch({ search, onSearchChange }: HelpHeroSearchProps) 
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[rgba(255,255,255,0.4)]">
           Centre d&apos;aide
         </div>
-        <h1 className="mb-2 font-['Syne'] text-[28px] font-black tracking-[-1px] text-white">
-          Comment pouvons-nous vous aider ?
-        </h1>
+        <DisplayTitle as="h1" size="display-3" className="mb-2 text-white">
+          Comment pouvons-nous vous aider&nbsp;?
+        </DisplayTitle>
         <p className="mb-5 text-[13px] text-[rgba(255,255,255,0.5)]">
           Recherchez dans nos guides, FAQ et tutoriels
         </p>
@@ -35,7 +36,7 @@ export function HelpHeroSearch({ search, onSearchChange }: HelpHeroSearchProps) 
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Ex: comment être payé, modifier mon profil..."
-            className="w-full rounded-xl border border-[#E5E0D8] bg-white py-3.5 pl-11 pr-4 font-['DM_Sans'] text-[14px] text-[#0F1E35] outline-none placeholder:text-[#9CA3AF] focus:ring-2 focus:ring-[rgba(240,90,26,0.2)]"
+            className="w-full rounded-xl border border-[#E5E0D8] bg-white py-3.5 pl-11 pr-4 font-sans text-[14px] text-[#0F1E35] outline-none placeholder:text-[#9CA3AF] focus:ring-2 focus:ring-[rgba(240,90,26,0.2)]"
           />
           {search && (
             <button

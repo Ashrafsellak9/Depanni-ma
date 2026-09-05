@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { DisplayTitle } from "@/components/ui/display-title";
+
 const DATA = [
   { day: "Lun", value: 255, missions: 1 },
   { day: "Mar", value: 425, missions: 2 },
@@ -25,7 +27,9 @@ export function EarningsChart() {
       className="h-full rounded-2xl border border-dep-border bg-white p-5"
     >
       <div className="mb-1 flex items-center justify-between">
-        <h3 className="text-[14px] font-semibold text-navy">Revenus — 7 derniers jours</h3>
+        <DisplayTitle as="h3" size="sm" className="text-[14px] font-semibold">
+          Revenus — 7 derniers jours
+        </DisplayTitle>
         <div className="flex gap-1.5">
           {(["7j", "30j", "3m"] as const).map((p) => (
             <button
@@ -45,7 +49,7 @@ export function EarningsChart() {
       </div>
 
       <div className="mb-4">
-        <span className="font-syne text-[32px] font-extrabold tracking-tight text-navy">
+        <span className="font-display text-[32px] font-extrabold tracking-tight text-navy">
           {(3200).toLocaleString("fr-FR")}
         </span>
         <span className="ml-1 text-[14px] text-dep-gray">MAD</span>

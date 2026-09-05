@@ -78,7 +78,7 @@ export function PricingDrawer({ open, mission, onClose, onSubmit }: PricingDrawe
                 Votre prix (MAD)
               </label>
               <div className="mb-3 rounded-2xl border-2 border-orange bg-cream p-4 text-center">
-                <div className="font-syne text-[48px] font-extrabold leading-none tracking-[-2px] text-navy">
+                <div className="font-display text-[48px] font-extrabold leading-none tracking-[-2px] text-navy">
                   {price}
                 </div>
                 <div className="mt-1 text-[12px] text-dep-gray">
@@ -146,7 +146,7 @@ export function PricingDrawer({ open, mission, onClose, onSubmit }: PricingDrawe
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Ex: Je suis disponible immédiatement et j'ai tout le matériel..."
-                className="h-20 w-full resize-none rounded-xl border border-dep-border bg-cream p-3 font-dm text-[13px] focus:border-navy focus:outline-none"
+                className="h-20 w-full resize-none rounded-xl border border-dep-border bg-cream p-3 font-sans text-[13px] focus:border-navy focus:outline-none"
               />
             </div>
 

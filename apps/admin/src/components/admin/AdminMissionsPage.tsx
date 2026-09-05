@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import { KpiCard } from "@/components/admin/KpiCard";
@@ -9,16 +9,19 @@ import { MissionDetailPanel } from "@/components/admin/missions/MissionDetailPan
 import { MissionsDataTable } from "@/components/admin/missions/MissionsDataTable";
 import { MissionsFiltersBar } from "@/components/admin/missions/MissionsFiltersBar";
 import {
-  MISSION_KPIS,
-  MOCK_MISSIONS,
   filterAndSortMissions,
   type AdminMissionRow,
   type MissionSortKey,
 } from "@/components/admin/missions/adminMissionsMock";
+import { mapApiMissionToUi } from "@/lib/adminUiMappers";
+import { fetchMissions, fetchOverview } from "@/services/adminApi";
 
 const PAGE_SIZE = 10;
 
 export function AdminMissionsPage() {
+  const [missions, setMissions] = useState<AdminMissionRow[]>([]);
+  const [kpis, setKpis] = useState({ today: 0, active: 0, pending: 0, gmv: 0 });
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [serviceFilter, setServiceFilter] = useState("all");
@@ -29,9 +32,37 @@ export function AdminMissionsPage() {
   const [selectedMission, setSelectedMission] = useState<AdminMissionRow | null>(null);
   const [page, setPage] = useState(1);
 
+  const load = useCallback(async () => {
+    try {
+      const [list, overview] = await Promise.all([
+        fetchMissions({ limit: 100 }),
+        fetchOverview().catch(() => null),
+      ]);
+      setMissions(list.items.map(mapApiMissionToUi));
+      if (overview) {
+        setKpis({
+          today: overview.kpis.missionsToday,
+          active: overview.kpis.missionsInProgress,
+          pending: overview.inProgressMissions.filter((m) =>
+            ["PENDING", "OFFERED", "WAITING"].includes(m.status),
+          ).length,
+          gmv: overview.kpis.gmvToday,
+        });
+      }
+      setError("");
+    } catch {
+      setError("Impossible de charger les missions.");
+      setMissions([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   const filtered = useMemo(
     () =>
-      filterAndSortMissions(MOCK_MISSIONS, {
+      filterAndSortMissions(missions, {
         search,
         statusFilter,
         serviceFilter,
@@ -40,7 +71,7 @@ export function AdminMissionsPage() {
         sortKey,
         sortDir,
       }),
-    [search, statusFilter, serviceFilter, period, urgentOnly, sortKey, sortDir],
+    [missions, search, statusFilter, serviceFilter, period, urgentOnly, sortKey, sortDir],
   );
 
   const paginated = useMemo(() => {
@@ -59,10 +90,54 @@ export function AdminMissionsPage() {
 
   const resetPage = () => setPage(1);
 
+  const missionKpis = [
+    {
+      label: "Total aujourd'hui",
+      value: kpis.today,
+      suffix: "",
+      change: "Temps réel",
+      trend: "up" as const,
+      icon: "ClipboardList",
+      iconBg: "orange" as const,
+    },
+    {
+      label: "En cours",
+      value: kpis.active,
+      suffix: "",
+      change: "Temps réel",
+      trend: "up" as const,
+      icon: "Zap",
+      iconBg: "green" as const,
+    },
+    {
+      label: "En attente",
+      value: kpis.pending,
+      suffix: "",
+      change: "Sans artisan",
+      trend: "up" as const,
+      icon: "Clock",
+      iconBg: "orange" as const,
+    },
+    {
+      label: "GMV du jour",
+      value: kpis.gmv,
+      suffix: " MAD",
+      change: "Aujourd'hui",
+      trend: "up" as const,
+      icon: "Banknote",
+      iconBg: "navy" as const,
+    },
+  ];
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {error && (
+        <p className="rounded-xl border border-dep-red/20 bg-dep-red/[0.06] px-4 py-2 text-sm text-dep-red">
+          {error}
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {MISSION_KPIS.map((kpi) => (
+        {missionKpis.map((kpi) => (
           <KpiCard key={kpi.label} {...kpi} />
         ))}
       </div>

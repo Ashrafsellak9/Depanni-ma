@@ -5,6 +5,7 @@ import { MapPin, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,7 +80,9 @@ export default function CitizenProfilePage() {
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-navy">Profil</h1>
+        <DisplayTitle as="h1" size="sm" className="text-2xl">
+          Profil
+        </DisplayTitle>
         <p className="text-muted-foreground">{profile?.email}</p>
       </div>
 

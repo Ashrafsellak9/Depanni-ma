@@ -5,7 +5,28 @@ import { AUTH_ROUTES, getDashboardForRole } from "@/lib/auth";
 import { handleArtisanAuth } from "@/lib/artisanMiddleware";
 import type { UserRole } from "@/types";
 
-const publicPaths = ["/", "/comment-ca-marche", "/prix", "/login", "/register"];
+const publicPaths = [
+  "/",
+  "/comment-ca-marche",
+  "/prix",
+  "/tarifs",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/mentions-legales",
+  "/cgu",
+  "/politique-confidentialite",
+  "/contact",
+  "/devenir-artisan",
+  "/artisans",
+  "/statut",
+  "/payment",
+  "/api/requests",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/opengraph-image",
+  "/twitter-image",
+];
 
 const citizenPaths = ["/dashboard", "/missions", "/profile", "/request"];
 

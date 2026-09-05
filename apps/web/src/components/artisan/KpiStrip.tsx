@@ -81,9 +81,9 @@ function CountUp({ value, suffix }: { value: number; suffix: string }) {
     : Math.round(displayed).toLocaleString("fr-FR");
 
   return (
-    <span ref={ref} className="font-syne text-[32px] font-extrabold tracking-tight text-navy">
+    <span ref={ref} className="font-display text-[32px] font-extrabold tracking-tight text-navy">
       {formatted}
-      {suffix && <span className="font-dm text-lg font-normal text-dep-gray">{suffix}</span>}
+      {suffix && <span className="font-sans text-lg font-normal text-dep-gray">{suffix}</span>}
     </span>
   );
 }

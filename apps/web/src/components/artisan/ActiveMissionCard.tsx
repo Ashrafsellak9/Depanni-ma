@@ -109,7 +109,7 @@ export function ActiveMissionCard({ mission }: { mission: ActiveMission }) {
         <div className="mb-4 flex items-center justify-between rounded-xl border border-dep-border bg-cream p-3">
           <span className="text-[13px] text-dep-gray">Montant convenu</span>
           <div className="text-right">
-            <span className="font-syne text-[20px] font-bold text-navy">{mission.price} MAD</span>
+            <span className="font-display text-[20px] font-bold text-navy">{mission.price} MAD</span>
             <div className="text-[11px] text-green">Net: {net} MAD</div>
           </div>
         </div>

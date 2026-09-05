@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AuthCard } from "@/components/auth/AuthCard";
 import { ArtisanRegisterForm } from "@/components/forms/ArtisanRegisterForm";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 export const metadata: Metadata = {
   title: "Inscription artisan",
@@ -9,20 +11,20 @@ export const metadata: Metadata = {
 
 export default function RegisterArtisanPage() {
   return (
-    <>
+    <AuthCard>
       <Link
         href="/register"
-        className="mb-4 inline-block text-sm text-muted-foreground hover:text-primary"
+        className="mb-4 inline-flex min-h-[44px] items-center text-sm font-medium text-dep-gray transition-colors duration-200 hover:text-navy"
       >
         ← Retour
       </Link>
-      <h1 className="text-2xl font-bold text-navy">Compte artisan</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <DisplayTitle as="h1" size="display-3" className="text-[1.5rem]">
+        Compte artisan
+      </DisplayTitle>
+      <p className="mt-2 text-sm text-dep-gray">
         Proposez vos services et développez votre activité
       </p>
-      <div className="mt-8">
-        <ArtisanRegisterForm />
-      </div>
-    </>
+      <ArtisanRegisterForm />
+    </AuthCard>
   );
 }

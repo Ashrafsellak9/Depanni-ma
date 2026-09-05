@@ -3,14 +3,15 @@
 import { MapPin } from "lucide-react";
 
 import type { ArtisanProfileForm } from "@/components/artisan/profile/useArtisanProfileForm";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 export function ProfileZoneSection({ form }: { form: ArtisanProfileForm }) {
   return (
     <div className="mb-5 rounded-2xl border border-dep-border bg-white p-6">
-      <h3 className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-navy">
+      <DisplayTitle as="h3" size="sm" className="mb-4 flex items-center gap-2 text-[14px] font-semibold">
         <MapPin size={15} className="text-orange" />
         Zone & Disponibilités
-      </h3>
+      </DisplayTitle>
 
       <div className="mb-5">
         <div className="mb-2 flex items-center justify-between">

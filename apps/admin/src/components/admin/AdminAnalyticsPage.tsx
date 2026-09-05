@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AnalyticsCategoryChart, AnalyticsGmvChart, AnalyticsInscriptionsChart } from "@/components/admin/analytics/AnalyticsCharts";
 import { AnalyticsFunnel } from "@/components/admin/analytics/AnalyticsFunnel";
@@ -12,15 +12,54 @@ import { AnalyticsTop10Section } from "@/components/admin/analytics/AnalyticsTop
 import {
   ANALYTICS_KPIS,
   PERIOD_TABS,
+  type AnalyticsKpiSnapshot,
   type AnalyticsPeriodKey,
 } from "@/components/admin/analytics/adminAnalyticsMock";
+import { mapAnalyticsToKpi } from "@/lib/adminUiMappers";
+import { fetchAnalytics } from "@/services/adminApi";
+import type { AnalyticsPeriod } from "@/types/analytics";
+
+const PERIOD_MAP: Record<AnalyticsPeriodKey, AnalyticsPeriod> = {
+  "7j": "7d",
+  "30j": "30d",
+  "90j": "90d",
+  "12m": "12m",
+};
 
 export function AdminAnalyticsPage() {
   const [period, setPeriod] = useState<AnalyticsPeriodKey>("30j");
-  const current = ANALYTICS_KPIS[period];
+  const [live, setLive] = useState<AnalyticsKpiSnapshot | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAnalytics({ period: PERIOD_MAP[period] })
+      .then((dash) => {
+        if (!cancelled) {
+          setLive(mapAnalyticsToKpi(dash));
+          setError("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLive(null);
+          setError("Analytics API indisponible — affichage des indicateurs de repli.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
+  const current = live ?? ANALYTICS_KPIS[period];
 
   return (
     <div>
+      {error && (
+        <p className="mb-4 rounded-xl border border-orange/20 bg-orange/[0.06] px-4 py-2 text-sm text-navy">
+          {error}
+        </p>
+      )}
       <div className="mb-5 flex flex-wrap rounded-xl border border-[#E5E0D8] bg-white p-1">
         {PERIOD_TABS.map((tab) => (
           <button

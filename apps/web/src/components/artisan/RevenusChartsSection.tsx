@@ -15,6 +15,7 @@ import {
 } from "recharts";
 
 import { BAR_CHART_DATA, SERVICE_BREAKDOWN } from "@/components/artisan/artisanRevenusMock";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 const WEEK_NET = BAR_CHART_DATA.reduce((s, d) => s + d.net, 0);
 const WEEK_COMMISSION = BAR_CHART_DATA.reduce((s, d) => s + (d.brut - d.net), 0);
@@ -26,7 +27,9 @@ export function RevenusChartsSection() {
     <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
       <div className="rounded-2xl border border-dep-border bg-white p-5 lg:col-span-2">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-[14px] font-semibold text-navy">Évolution des revenus</h3>
+          <DisplayTitle as="h3" size="sm" className="text-[14px] font-semibold">
+            Évolution des revenus
+          </DisplayTitle>
           <div className="flex gap-1.5">
             {(["7j", "30j", "3m"] as const).map((p) => (
               <button
@@ -87,7 +90,9 @@ export function RevenusChartsSection() {
       </div>
 
       <div className="rounded-2xl border border-dep-border bg-white p-5">
-        <h3 className="text-[14px] font-semibold text-navy">Par service</h3>
+        <DisplayTitle as="h3" size="sm" className="text-[14px] font-semibold">
+          Par service
+        </DisplayTitle>
         <p className="mb-4 text-[11px] text-dep-gray">Répartition des revenus</p>
 
         <div style={{ height: 160 }}>

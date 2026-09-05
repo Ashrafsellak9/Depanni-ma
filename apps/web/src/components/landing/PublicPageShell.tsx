@@ -9,7 +9,7 @@ export function PublicPageShell({
   return (
     <>
       <Navbar />
-      <main className="pt-24">{children}</main>
+      <main id="contenu" className="scroll-mt-28 pt-[72px] md:pt-20">{children}</main>
       <Footer />
     </>
   );

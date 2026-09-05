@@ -9,9 +9,13 @@ type RevenusKpiCardsProps = {
 };
 
 export function RevenusKpiCards({ current }: RevenusKpiCardsProps) {
-  const projectionPct = Math.round((current.revenue / current.projection.revenue) * 100);
-  const avgTicket = Math.round(current.gmv / current.missions);
-  const avgRevenuePerMission = Math.round(current.revenue / current.missions);
+  const projectionPct = current.projection.revenue
+    ? Math.round((current.revenue / current.projection.revenue) * 100)
+    : 0;
+  const avgTicket = current.missions ? Math.round(current.gmv / current.missions) : 0;
+  const avgRevenuePerMission = current.missions
+    ? Math.round(current.revenue / current.missions)
+    : 0;
 
   return (
     <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">

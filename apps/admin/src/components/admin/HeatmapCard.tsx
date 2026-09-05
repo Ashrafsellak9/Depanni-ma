@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-export function HeatmapCard() {
+export function HeatmapCard({ pointCount }: { pointCount?: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -33,7 +33,9 @@ export function HeatmapCard() {
           <div className="absolute bottom-[25%] left-[40%] h-16 w-16 rounded-full bg-orange/25 blur-sm" />
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="rounded-full bg-white/75 px-4 py-2 text-xs font-semibold text-navy backdrop-blur-sm">
-              Carte temps réel — El Jadida
+              {pointCount != null
+                ? `${pointCount} point${pointCount > 1 ? "s" : ""} d'activité — El Jadida`
+                : "Carte temps réel — El Jadida"}
             </span>
           </div>
         </div>

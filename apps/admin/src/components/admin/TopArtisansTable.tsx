@@ -36,7 +36,21 @@ const TOP_ARTISANS = [
   },
 ];
 
-export function TopArtisansTable() {
+export type TopArtisanRow = {
+  rank: number;
+  id?: string;
+  initials: string;
+  bg?: string;
+  gradient?: string;
+  name: string;
+  spec: string;
+  missions: number;
+  rating: number;
+  revenue: string;
+};
+
+export function TopArtisansTable({ artisans }: { artisans?: TopArtisanRow[] }) {
+  const list = artisans ?? TOP_ARTISANS;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -65,15 +79,15 @@ export function TopArtisansTable() {
             </tr>
           </thead>
           <tbody>
-            {TOP_ARTISANS.length === 0 ? (
+            {list.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-sm text-[#6B7280]">
                   Aucune donnée
                 </td>
               </tr>
             ) : (
-              TOP_ARTISANS.map((a) => (
-                <tr key={a.rank} className="hover:bg-[#FAF7F2]">
+              list.map((a) => (
+                <tr key={a.id ?? a.rank} className="hover:bg-[#FAF7F2]">
                   <td className="px-3 py-2.5">
                     <span
                       className={`font-syne text-sm font-bold ${
@@ -86,8 +100,10 @@ export function TopArtisansTable() {
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <div
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold text-white"
-                        style={{ background: a.bg }}
+                        className={`flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold text-white ${
+                          a.gradient && !a.bg ? `bg-gradient-to-br ${a.gradient}` : ""
+                        }`}
+                        style={a.bg ? { background: a.bg } : undefined}
                       >
                         {a.initials}
                       </div>

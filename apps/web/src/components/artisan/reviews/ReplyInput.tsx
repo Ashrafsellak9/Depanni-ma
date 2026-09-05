@@ -69,7 +69,7 @@ export function ReplyInput({ reviewId, onReply }: ReplyInputProps) {
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_LENGTH))}
         placeholder="Répondez publiquement à cet avis..."
-        className="mb-2 h-20 w-full resize-none rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-3 font-['DM_Sans'] text-[13px] transition-all focus:border-[#0F1E35] focus:bg-white focus:outline-none"
+        className="mb-2 h-20 w-full resize-none rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-3 font-sans text-[13px] transition-all focus:border-[#0F1E35] focus:bg-white focus:outline-none"
       />
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-[#6B7280]">

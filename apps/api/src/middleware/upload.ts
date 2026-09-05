@@ -2,14 +2,29 @@ import type { Request } from "express";
 import multer, { type FileFilterCallback } from "multer";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
-import { getPublicUrl, getS3, getS3Bucket } from "../config/s3.js";
+import {
+  getLocalPublicUrl,
+  getLocalUploadRoot,
+  isLocalStorageEnabled,
+} from "../config/localStorage.js";
+import {
+  getPublicUrl,
+  getS3,
+  getS3Bucket,
+  supportsObjectAcl,
+} from "../config/s3.js";
 import { AppError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 type AllowedMime = (typeof ALLOWED_MIME_TYPES)[number];
 
 const memoryStorage = multer.memoryStorage();
+
+let localFallbackLogged = false;
 
 function fileFilter(
   _req: Request,
@@ -36,35 +51,70 @@ export interface UploadedFileResult {
   height: number;
 }
 
+async function saveLocally(buffer: Buffer, key: string): Promise<void> {
+  if (!localFallbackLogged) {
+    logger.warn("S3/R2 unavailable — using local .uploads directory (dev/test only)");
+    localFallbackLogged = true;
+  }
+
+  const fullPath = path.join(getLocalUploadRoot(), key);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, buffer);
+}
+
+async function storeBuffer(
+  buffer: Buffer,
+  key: string,
+  contentType: string,
+  options: { publicRead: boolean; width?: number; height?: number },
+): Promise<UploadedFileResult> {
+  const s3 = getS3();
+
+  if (s3) {
+    // R2 n'accepte pas les ACL ; l'accès public passe par S3_PUBLIC_URL.
+    await s3
+      .upload({
+        Bucket: getS3Bucket(),
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        ...(options.publicRead && supportsObjectAcl()
+          ? { ACL: "public-read" as const }
+          : {}),
+      })
+      .promise();
+
+    return {
+      key,
+      url: options.publicRead ? getPublicUrl(key) : key,
+      width: options.width ?? 0,
+      height: options.height ?? 0,
+    };
+  }
+
+  // Production : jamais de disque local
+  if (!isLocalStorageEnabled()) {
+    throw new AppError(503, "S3_UNAVAILABLE", "Service de stockage indisponible");
+  }
+
+  await saveLocally(buffer, key);
+
+  return {
+    key,
+    url: options.publicRead ? getLocalPublicUrl(key) : key,
+    width: options.width ?? 0,
+    height: options.height ?? 0,
+  };
+}
+
 export async function uploadRawFile(
   buffer: Buffer,
   folder: string,
   contentType: string,
   extension: string,
 ): Promise<UploadedFileResult> {
-  const s3 = getS3();
-  if (!s3) {
-    throw new AppError(503, "S3_UNAVAILABLE", "Service de stockage indisponible");
-  }
-
   const key = `${folder}/${randomUUID()}.${extension}`;
-
-  await s3
-    .upload({
-      Bucket: getS3Bucket(),
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-      ACL: "public-read",
-    })
-    .promise();
-
-  return {
-    key,
-    url: getPublicUrl(key),
-    width: 0,
-    height: 0,
-  };
+  return storeBuffer(buffer, key, contentType, { publicRead: true });
 }
 
 /** Upload privé (KYC) — pas d'ACL public, accès via signed URL. */
@@ -74,39 +124,14 @@ export async function uploadPrivateFile(
   contentType: string,
   extension: string,
 ): Promise<UploadedFileResult> {
-  const s3 = getS3();
-  if (!s3) {
-    throw new AppError(503, "S3_UNAVAILABLE", "Service de stockage indisponible");
-  }
-
   const key = `${folder}/${randomUUID()}.${extension}`;
-
-  await s3
-    .upload({
-      Bucket: getS3Bucket(),
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    })
-    .promise();
-
-  return {
-    key,
-    url: key,
-    width: 0,
-    height: 0,
-  };
+  return storeBuffer(buffer, key, contentType, { publicRead: false });
 }
 
 export async function processAndUploadImage(
   buffer: Buffer,
   folder = "uploads",
 ): Promise<UploadedFileResult> {
-  const s3 = getS3();
-  if (!s3) {
-    throw new AppError(503, "S3_UNAVAILABLE", "Service de stockage indisponible");
-  }
-
   const processed = await sharp(buffer)
     .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
     .webp({ quality: 85 })
@@ -114,20 +139,9 @@ export async function processAndUploadImage(
 
   const key = `${folder}/${randomUUID()}.webp`;
 
-  await s3
-    .upload({
-      Bucket: getS3Bucket(),
-      Key: key,
-      Body: processed.data,
-      ContentType: "image/webp",
-      ACL: "public-read",
-    })
-    .promise();
-
-  return {
-    key,
-    url: getPublicUrl(key),
+  return storeBuffer(processed.data, key, "image/webp", {
+    publicRead: true,
     width: processed.info.width,
     height: processed.info.height,
-  };
+  });
 }

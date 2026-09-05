@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 export const metadata = { title: "Admin" };
 
 export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-navy">Administration DEPANNI</h1>
+      <DisplayTitle as="h1" size="sm" className="text-2xl">
+        Administration DEPANNI
+      </DisplayTitle>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {["Utilisateurs", "Artisans", "Jobs", "KYC en attente"].map((label) => (
           <Card key={label}>

@@ -5,7 +5,9 @@
   "description": "DEPANNI.ma — Plateforme de dépannage et services à domicile au Maroc",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=@depanni/web --filter=@depanni/api --filter=@depanni/admin",
+    "dev:all": "turbo run dev --filter=@depanni/web --filter=@depanni/api --filter=@depanni/admin --filter=@depanni/mobile-citizen --filter=@depanni/mobile-artisan",
+    "dev:mobile": "turbo run dev --filter=@depanni/mobile-citizen --filter=@depanni/mobile-artisan",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",

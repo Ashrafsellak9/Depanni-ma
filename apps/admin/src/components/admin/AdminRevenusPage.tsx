@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { RevenusBarChart } from "@/components/admin/revenus/RevenusBarChart";
 import { RevenusCategorySection } from "@/components/admin/revenus/RevenusCategorySection";
@@ -11,19 +11,60 @@ import { RevenusWeeklyTable } from "@/components/admin/revenus/RevenusWeeklyTabl
 import {
   PERIOD_DATA,
   PERIOD_TABS,
+  type PeriodSnapshot,
   type RevenusPeriodKey,
 } from "@/components/admin/revenus/adminRevenusMock";
+import { mapRevenueToSnapshot } from "@/lib/adminUiMappers";
+import { fetchRevenueReport } from "@/services/adminApi";
+import type { AnalyticsPeriod } from "@/types/analytics";
+
+const PERIOD_MAP: Record<RevenusPeriodKey, AnalyticsPeriod> = {
+  "7j": "7d",
+  "30j": "30d",
+  "90j": "90d",
+  "12m": "12m",
+};
 
 export function AdminRevenusPage() {
   const [activePeriod, setActivePeriod] = useState<RevenusPeriodKey>("30j");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [showCustom, setShowCustom] = useState(false);
+  const [live, setLive] = useState<PeriodSnapshot | null>(null);
+  const [error, setError] = useState("");
 
-  const current = PERIOD_DATA[activePeriod];
+  useEffect(() => {
+    let cancelled = false;
+    const params = showCustom && customFrom && customTo
+      ? { period: "custom" as const, from: customFrom, to: customTo }
+      : { period: PERIOD_MAP[activePeriod] };
+    fetchRevenueReport(params)
+      .then((report) => {
+        if (!cancelled) {
+          setLive(mapRevenueToSnapshot(report));
+          setError("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLive(null);
+          setError("Rapport revenus indisponible — affichage de repli.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePeriod, showCustom, customFrom, customTo]);
+
+  const current = live ?? PERIOD_DATA[activePeriod];
 
   return (
     <div>
+      {error && (
+        <p className="mb-4 rounded-xl border border-orange/20 bg-orange/[0.06] px-4 py-2 text-sm text-navy">
+          {error}
+        </p>
+      )}
       <div className="mb-5 flex flex-wrap items-end gap-3">
         <div className="flex flex-wrap rounded-xl border border-[#E5E0D8] bg-white p-1">
           {PERIOD_TABS.map((tab) => (

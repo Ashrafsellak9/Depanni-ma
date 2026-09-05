@@ -34,6 +34,8 @@ function buildArtisanCreateData(
     firstName: input.firstName,
     lastName: input.lastName,
     serviceRadiusKm: input.serviceRadiusKm,
+    specialties: input.specialties,
+    zones: [input.city],
     kycStatus: "PENDING",
     kycDocUrls: kycUrls,
     ...(input.cinNumber != null ? { cinNumber: input.cinNumber } : {}),
@@ -88,13 +90,14 @@ export class AuthService {
       },
     });
 
-    await otpService.send(input.phone, "REGISTER", input.locale);
+    const { devOtp } = await otpService.send(input.phone, "REGISTER", input.locale);
 
     return {
       message: "Inscription initiée. Vérifiez le code OTP envoyé par SMS.",
       userId: user.id,
       phone: user.phone,
       otpSent: true,
+      ...(devOtp ? { devOtp } : {}),
     };
   }
 
@@ -143,13 +146,14 @@ export class AuthService {
       `;
     }
 
-    await otpService.send(input.phone, "REGISTER", input.locale);
+    const { devOtp } = await otpService.send(input.phone, "REGISTER", input.locale);
 
     return {
       message: "Inscription artisan initiée. Vérifiez le code OTP envoyé par SMS.",
       userId: user.id,
       phone: user.phone,
       otpSent: true,
+      ...(devOtp ? { devOtp } : {}),
     };
   }
 
@@ -189,13 +193,20 @@ export class AuthService {
     };
   }
 
-  async resendOtp(phone: string, purpose: VerifyOtpInput["purpose"], locale = "fr"): Promise<{ message: string }> {
+  async resendOtp(
+    phone: string,
+    purpose: VerifyOtpInput["purpose"],
+    locale = "fr",
+  ): Promise<{ message: string; devOtp?: string }> {
     const user = await prisma.user.findUnique({ where: { phone } });
     if (!user) {
       return { message: "Si le numéro existe, un code OTP a été envoyé." };
     }
-    await otpService.send(phone, purpose, locale);
-    return { message: "Code OTP renvoyé par SMS." };
+    const { devOtp } = await otpService.send(phone, purpose, locale);
+    return {
+      message: "Code OTP renvoyé par SMS.",
+      ...(devOtp ? { devOtp } : {}),
+    };
   }
 
   async login(input: LoginInput): Promise<AuthSessionResponse> {
@@ -256,23 +267,37 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
-    const user = await prisma.user.findUnique({ where: { phone: input.phone } });
-    if (!user) {
-      return { message: "Si le numéro existe, un code OTP a été envoyé." };
+  async forgotPassword(
+    input: ForgotPasswordInput,
+  ): Promise<{ message: string; devOtp?: string }> {
+    const generic = "Si le compte existe, un code de vérification a été envoyé.";
+
+    const user = input.email
+      ? await prisma.user.findUnique({ where: { email: input.email } })
+      : await prisma.user.findUnique({ where: { phone: input.phone! } });
+
+    // Via email (flux admin) : réservé aux comptes ADMIN — réponse générique sinon.
+    if (!user || (input.email && user.role !== "ADMIN")) {
+      return { message: generic };
     }
 
-    await otpService.send(input.phone, "RESET", user.locale);
-    return { message: "Si le numéro existe, un code OTP a été envoyé." };
+    const { devOtp } = await otpService.send(user.phone, "RESET", user.locale);
+    return {
+      message: generic,
+      ...(devOtp ? { devOtp } : {}),
+    };
   }
 
   async resetPassword(input: ResetPasswordInput): Promise<{ message: string }> {
-    await otpService.verify(input.phone, "RESET", input.code);
+    const user = input.email
+      ? await prisma.user.findUnique({ where: { email: input.email } })
+      : await prisma.user.findUnique({ where: { phone: input.phone! } });
 
-    const user = await prisma.user.findUnique({ where: { phone: input.phone } });
-    if (!user) {
+    if (!user || (input.email && user.role !== "ADMIN")) {
       throw new NotFoundError("Utilisateur");
     }
+
+    await otpService.verify(user.phone, "RESET", input.code);
 
     const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
     await prisma.user.update({

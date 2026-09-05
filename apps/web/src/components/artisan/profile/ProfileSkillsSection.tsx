@@ -3,14 +3,15 @@
 import { Wrench, X } from "lucide-react";
 
 import type { ArtisanProfileForm } from "@/components/artisan/profile/useArtisanProfileForm";
+import { DisplayTitle } from "@/components/ui/display-title";
 
 export function ProfileSkillsSection({ form }: { form: ArtisanProfileForm }) {
   return (
     <div className="mb-5 rounded-2xl border border-dep-border bg-white p-6">
-      <h3 className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-navy">
+      <DisplayTitle as="h3" size="sm" className="mb-4 flex items-center gap-2 text-[14px] font-semibold">
         <Wrench size={15} className="text-orange" />
         Métier & Spécialités
-      </h3>
+      </DisplayTitle>
 
       <div className="mb-4">
         <label className="field-label">Service principal</label>

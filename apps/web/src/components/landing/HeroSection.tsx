@@ -1,101 +1,107 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 
-import { AUTH_ROUTES } from "@/lib/auth";
-import { fadeInRight, fadeInUp, staggerContainer, viewportOnce } from "@/components/landing/motion";
 import { PhoneMockup } from "@/components/landing/PhoneMockup";
+import { InitialAvatar } from "@/components/landing/ui/InitialAvatar";
+import { ArrowRight } from "@/components/landing/ui/ArrowRight";
+import { LandingPill } from "@/components/landing/ui/LandingPill";
+import { RequestCta } from "@/components/landing/ui/RequestCta";
+import { Accent, DisplayTitle } from "@/components/ui/display-title";
 
-const TRUST_AVATARS = [
-  { initials: "SM", bg: "from-navy to-navy-2" },
-  { initials: "FK", bg: "from-orange to-orange-2" },
-  { initials: "LB", bg: "from-green to-emerald-600" },
-  { initials: "YA", bg: "from-violet-600 to-indigo-700" },
-];
+const TRUST_AVATARS = ["SM", "FK", "LB", "YA"] as const;
 
 export function HeroSection() {
-  return (
-    <section
-      id="el-jadida"
-      className="relative overflow-x-hidden bg-cream pb-16 pt-28 md:pb-24 md:pt-36 lg:pt-40"
-    >
-      <div className="pointer-events-none absolute right-[-150px] top-[-150px] h-[600px] w-[600px] bg-[radial-gradient(circle,rgba(240,90,26,0.07),transparent_60%)]" />
-      <div className="pointer-events-none absolute bottom-0 left-[-150px] h-[600px] w-[600px] bg-[radial-gradient(circle,rgba(15,30,53,0.05),transparent_60%)]" />
+  const reduced = useReducedMotion();
+  const enter = reduced
+    ? {}
+    : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } };
 
-      <div className="container relative mx-auto grid items-center gap-12 px-4 lg:grid-cols-2 lg:gap-16">
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="max-w-xl"
-        >
-          <motion.div variants={fadeInUp} className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange/20 bg-white px-4 py-2 shadow-sm">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green" />
-            </span>
-            <span className="text-sm font-medium text-navy">Disponible à El Jadida</span>
+  return (
+    <section className="relative bg-paper pb-20 pt-28 md:pb-28 md:pt-36">
+      <div className="landing-container relative grid items-center gap-12 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <motion.div {...enter} transition={{ duration: 0.5 }}>
+            <LandingPill>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-pulse-soft rounded-full bg-success" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Disponible à El Jadida
+            </LandingPill>
           </motion.div>
 
-          <motion.h1
-            variants={fadeInUp}
-            className="font-syne text-[38px] font-extrabold leading-[1.05] tracking-tight3 text-navy md:text-[52px] lg:text-[58px]"
-          >
-            L&apos;artisan qu&apos;il vous faut,
-            <br />
-            <em className="not-italic text-orange">en quelques minutes</em>
-          </motion.h1>
+          <motion.div {...enter} transition={{ duration: 0.55, delay: 0.06 }}>
+            <DisplayTitle as="h1" size="display-1" className="mt-6">
+              L&apos;artisan qu&apos;il vous <Accent>faut</Accent>,
+              <br />
+              <span className="lg:-indent-3">en quelques minutes</span>
+            </DisplayTitle>
+          </motion.div>
 
           <motion.p
-            variants={fadeInUp}
-            className="mt-6 max-w-lg text-lg font-light text-dep-gray md:text-[18px]"
+            {...enter}
+            transition={{ duration: 0.55, delay: 0.12 }}
+            className="mt-6 max-w-[52ch] text-lg text-ink/70"
           >
-            Plomberie, électricité, serrurerie — publiez votre demande et recevez des offres
-            d&apos;artisans vérifiés près de chez vous à El Jadida.
+            Décrivez votre panne, recevez jusqu&apos;à 3 offres d&apos;artisans vérifiés en moins
+            de 8 minutes, et payez en toute sécurité. Disponible à El Jadida.
           </motion.p>
 
-          <motion.div variants={fadeInUp} className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Link
-              href={AUTH_ROUTES.newRequest}
-              className="inline-flex items-center justify-center rounded-full bg-orange px-8 py-4 text-base font-medium text-white transition-colors hover:bg-orange-2"
-            >
-              Faire une demande →
-            </Link>
+          <motion.div
+            {...enter}
+            transition={{ duration: 0.55, delay: 0.18 }}
+            className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
+          >
+            <RequestCta event="hero-request" className="min-h-[56px] px-8 text-base">
+              Faire une demande
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </RequestCta>
             <Link
               href="#cta"
-              className="inline-flex items-center justify-center rounded-full border-2 border-navy/15 bg-transparent px-8 py-4 text-base font-medium text-navy transition-colors hover:border-navy/30 hover:bg-white"
+              data-event="hero-download"
+              className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-ink/15 px-6 text-sm font-medium text-ink transition-all duration-200 hover:-translate-y-px hover:border-ink/30"
             >
-              📱 Télécharger l&apos;app
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.21 2.31-.9 3.57-.84 1.51.07 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.6 1.57-1.38 3.13-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.16 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+              </svg>
+              Télécharger l&apos;app
             </Link>
           </motion.div>
 
-          <motion.div variants={fadeInUp} className="mt-10 flex items-center gap-4">
-            <div className="flex -space-x-3">
-              {TRUST_AVATARS.map((a) => (
-                <div
-                  key={a.initials}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-cream bg-gradient-to-br text-xs font-bold text-white ${a.bg}`}
-                >
-                  {a.initials}
-                </div>
+          <motion.p
+            {...enter}
+            transition={{ duration: 0.55, delay: 0.22 }}
+            className="mt-6 text-xs uppercase tracking-widest text-ink/70"
+          >
+            Gratuit pour les clients · Artisans vérifiés KYC · Paiement sécurisé
+          </motion.p>
+
+          <motion.div
+            {...enter}
+            transition={{ duration: 0.55, delay: 0.28 }}
+            className="mt-10 flex items-center gap-4"
+          >
+            <div className="flex">
+              {TRUST_AVATARS.map((initials, i) => (
+                <InitialAvatar
+                  key={initials}
+                  initials={initials}
+                  className={`h-10 w-10 border-2 border-paper text-xs ${i > 0 ? "-ml-3" : ""}`}
+                />
               ))}
             </div>
-            <p className="text-sm text-dep-gray">
-              <span className="font-semibold text-navy">+1 200</span> clients satisfaits à El Jadida
+            <p className="text-sm text-ink/65">
+              <span className="num font-mono tracking-[-0.02em] text-ink">+1&nbsp;200</span> clients à El
+              Jadida
             </p>
           </motion.div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={fadeInRight}
-          initial="hidden"
-          animate="visible"
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="relative flex justify-center overflow-visible lg:justify-end lg:pr-4"
-        >
+        <div className="overflow-visible lg:col-span-5 lg:col-start-8">
           <PhoneMockup />
-        </motion.div>
+        </div>
       </div>
     </section>
   );

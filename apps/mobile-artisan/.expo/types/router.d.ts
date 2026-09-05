@@ -7,11 +7,11 @@ declare module "expo-router" {
   export * from 'expo-router/build';
 
   // prettier-ignore
-  type StaticRoutes = `/` | `/(auth)/login` | `/login` | `/(tabs)/earnings` | `/earnings` | `/(tabs)/` | `/(tabs)` | `/(tabs)/missions` | `/missions` | `/(tabs)/profile` | `/profile`;
+  type StaticRoutes = `/` | `/(app)/(tabs)/earnings` | `/earnings` | `/(app)/(tabs)/` | `/(app)/(tabs)` | `/(app)/(tabs)/missions` | `/missions` | `/(app)/(tabs)/profile` | `/profile` | `/(auth)/login` | `/login` | `/(auth)/register` | `/register` | `/(auth)/verify-otp` | `/verify-otp`;
   // prettier-ignore
-  type DynamicRoutes<T extends string> = `/mission/${SingleRoutePart<T>}/chat` | `/mission/${SingleRoutePart<T>}/recap` | `/mission/${SingleRoutePart<T>}` | `/offer/${SingleRoutePart<T>}`;
+  type DynamicRoutes<T extends string> = `/(app)/mission/${SingleRoutePart<T>}/chat` | `/mission/${SingleRoutePart<T>}/chat` | `/(app)/mission/${SingleRoutePart<T>}/recap` | `/mission/${SingleRoutePart<T>}/recap` | `/(app)/mission/${SingleRoutePart<T>}` | `/mission/${SingleRoutePart<T>}` | `/(app)/offer/${SingleRoutePart<T>}` | `/offer/${SingleRoutePart<T>}`;
   // prettier-ignore
-  type DynamicRouteTemplate = `/mission/[id]/chat` | `/mission/[id]/recap` | `/mission/[id]` | `/offer/[jobId]`;
+  type DynamicRouteTemplate = `/(app)/mission/[id]/chat` | `/(app)/mission/[id]/recap` | `/(app)/mission/[id]` | `/(app)/offer/[jobId]`;
 
   type RelativePathString = `./${string}` | `../${string}` | '..';
   type AbsoluteRoute = DynamicRouteTemplate | StaticRoutes;

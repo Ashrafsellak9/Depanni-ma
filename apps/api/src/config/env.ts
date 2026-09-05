@@ -52,12 +52,15 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_PRIVATE_KEY: z.string().optional(),
 
-  S3_ENDPOINT: z.string().optional(),
+  /** Endpoint S3-compatible (Cloudflare R2). Requis en production. */
+  S3_ENDPOINT: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   S3_REGION: z.string().default("auto"),
-  S3_BUCKET: z.string().optional(),
-  S3_ACCESS_KEY_ID: z.string().optional(),
-  S3_SECRET_ACCESS_KEY: z.string().optional(),
-  S3_PUBLIC_URL: z.string().optional(),
+  /** Bucket R2/S3. Requis en production. */
+  S3_BUCKET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  S3_ACCESS_KEY_ID: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  S3_SECRET_ACCESS_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** URL publique CDN (domaine custom R2). Requis en production. */
+  S3_PUBLIC_URL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 
   GOOGLE_MAPS_API_KEY: z.string().optional(),
 
@@ -73,6 +76,7 @@ const envSchema = z.object({
     .string()
     .default("http://localhost:4000/api/payments/cmi/callback"),
   CMI_RETURN_URL: z.string().default("http://localhost:3000/payment/success"),
+  CMI_FAIL_URL: z.string().default("http://localhost:3000/payment/fail"),
 
   WALLET_COMMISSION_RATE_STANDARD: z.coerce.number().min(0).max(1).default(0.15),
   WALLET_COMMISSION_RATE_PREMIUM: z.coerce.number().min(0).max(1).default(0.1),
@@ -108,6 +112,33 @@ function parseEnv(): Env {
     }
     if (!data.COOKIE_SECURE) {
       console.warn("WARN: COOKIE_SECURE=false in production");
+    }
+    if (!data.CMI_MERCHANT_ID || !data.CMI_STORE_KEY) {
+      console.warn("WARN: CMI_MERCHANT_ID / CMI_STORE_KEY missing — card checkout returns 503");
+    }
+    if (!data.TWILIO_ACCOUNT_SID || !data.TWILIO_AUTH_TOKEN) {
+      console.warn("WARN: Twilio OTP not configured — SMS will fail in production");
+    }
+
+    const missingStorage = (
+      [
+        "S3_ENDPOINT",
+        "S3_BUCKET",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_PUBLIC_URL",
+      ] as const
+    ).filter((key) => !data[key]);
+
+    if (missingStorage.length > 0) {
+      console.error(
+        "Production requires Cloudflare R2 / S3 storage:",
+        missingStorage.join(", "),
+      );
+      console.error(
+        "Local .uploads fallback is disabled outside development/test.",
+      );
+      process.exit(1);
     }
   }
   return data;

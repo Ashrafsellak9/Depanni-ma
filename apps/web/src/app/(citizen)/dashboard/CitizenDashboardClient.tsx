@@ -8,6 +8,7 @@ import { ActiveMissionBanner } from "@/app/(citizen)/dashboard/components/Active
 import { ArtisansMap } from "@/components/maps";
 import { QuickServiceGrid } from "@/app/(citizen)/dashboard/components/QuickServiceGrid";
 import { Button } from "@/components/ui/button";
+import { DisplayTitle } from "@/components/ui/display-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJobOfferNotifications } from "@/hooks/citizen/useJobOfferNotifications";
@@ -52,7 +53,9 @@ export function CitizenDashboardClient() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Accueil</h1>
+          <DisplayTitle as="h1" size="sm" className="text-2xl">
+            Accueil
+          </DisplayTitle>
           <p className="text-muted-foreground">Artisans disponibles près de vous</p>
         </div>
         <Button asChild variant="destructive" size="lg" className="shadow-md">
@@ -66,7 +69,9 @@ export function CitizenDashboardClient() {
       <ActiveMissionBanner />
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-navy">Services</h2>
+        <DisplayTitle as="h2" size="sm" className="text-lg font-semibold">
+          Services
+        </DisplayTitle>
         <QuickServiceGrid
           selectedCategoryId={categoryId}
           onSelectCategory={setCategoryId}
@@ -75,7 +80,9 @@ export function CitizenDashboardClient() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-navy">Artisans à proximité</h2>
+          <DisplayTitle as="h2" size="sm" className="text-lg font-semibold">
+            Artisans à proximité
+          </DisplayTitle>
           {geoError && <p className="text-xs text-muted-foreground">{geoError}</p>}
         </div>
         <Card className="overflow-hidden">
